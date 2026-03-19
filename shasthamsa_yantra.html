@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shasthamsa Yantra</title>
+<style>
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; background: #0B101A; font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; }
+    #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100vh; }
+    
+    /* UI Overlay */
+    .ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; }
+    .panel { background: rgba(15, 20, 30, 0.85); border: 1px solid rgba(100, 150, 255, 0.2); backdrop-filter: blur(8px); border-radius: 12px; pointer-events: auto; }
+    
+    /* Header */
+    .header { align-self: flex-start; padding: 16px 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+    .title { font-size: 20px; font-weight: 800; color: #E2E8F0; letter-spacing: 2px; text-transform: uppercase; margin: 0 0 4px 0; }
+    .subtitle { font-size: 11px; color: #94A3B8; letter-spacing: 1px; text-transform: uppercase; }
+    
+    /* Data Panels */
+    .data-container { position: absolute; top: 16px; right: 16px; display: flex; flex-direction: column; gap: 12px; width: 280px; }
+    .data-box { padding: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+    .box-title { font-size: 10px; color: #38BDF8; font-weight: 700; letter-spacing: 1.5px; margin-bottom: 10px; border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 6px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .grid-1 { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 8px;}
+    .data-item { background: rgba(0, 0, 0, 0.4); border-radius: 6px; padding: 8px; border: 1px solid rgba(255,255,255,0.05); }
+    .d-label { font-size: 9px; color: #94A3B8; letter-spacing: 0.5px; margin-bottom: 2px; text-transform: uppercase; }
+    .d-value { font-size: 14px; color: #F8FAFC; font-weight: 600; }
+    .d-highlight { color: #FBBF24; font-weight: 700; }
+    .status-text { font-size: 11px; color: #FBBF24; text-align: center; margin-top: 10px; font-style: italic; }
+
+    /* Controls */
+    .controls { align-self: stretch; padding: 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 -4px 20px rgba(0,0,0,0.5); }
+    .slider-row { display: flex; align-items: center; gap: 12px; }
+    .s-label { width: 140px; font-size: 11px; color: #94A3B8; font-weight: 600; letter-spacing: 0.5px; }
+    .s-val { width: 80px; font-size: 11px; color: #FBBF24; font-weight: bold; text-align: right; }
+    input[type=range] { flex: 1; -webkit-appearance: none; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; outline: none; }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #38BDF8; cursor: pointer; border: 2px solid #0B101A; box-shadow: 0 0 5px rgba(56,189,248,0.5); }
+    
+    .btn-row { display: flex; gap: 8px; margin-top: 4px; }
+    button { flex: 1; padding: 10px; font-size: 10px; font-weight: 700; cursor: pointer; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; color: #38BDF8; letter-spacing: 1px; transition: all 0.2s; text-transform: uppercase; }
+    button:hover { background: rgba(56, 189, 248, 0.2); }
+    .btn-active { background: rgba(251, 191, 36, 0.15); border-color: rgba(251, 191, 36, 0.5); color: #FBBF24; }
+</style>
+</head>
+<body>
+
+<div id="canvas-container">
+    <canvas id="c"></canvas>
+</div>
+
+<div class="ui-layer">
+    <div class="panel header">
+        <h1 class="title">Shasthamsa Yantra</h1>
+        <div class="subtitle">60° Meridian Arc Observatory & Ecliptic Calculator</div>
+    </div>
+
+    <div class="data-container">
+        <!-- Astrological & Ecliptic Data -->
+        <div class="panel data-box">
+            <div class="box-title">ECLIPTIC & ZODIAC (Rasi)</div>
+            <div class="grid-2">
+                <div class="data-item"><div class="d-label">Solar Longitude (λ)</div><div class="d-value d-highlight" id="v_lon">0.0°</div></div>
+                <div class="data-item"><div class="d-label">Sun Declination (δ)</div><div class="d-value" id="v_dec">0.0°</div></div>
+            </div>
+            <div class="grid-1">
+                <div class="data-item"><div class="d-label">Current Zodiac Sign</div><div class="d-value" id="v_sign" style="color:#A78BFA">Aries (Mesha)</div></div>
+                <div class="data-item"><div class="d-label">Shasthamsa (1/6 Div)</div><div class="d-value" id="v_shas" style="color:#34D399">1st (0° - 5°)</div></div>
+            </div>
+        </div>
+
+        <!-- Local Observatory Data -->
+        <div class="panel data-box">
+            <div class="box-title">LOCAL OBSERVATORY (Jaipur)</div>
+            <div class="grid-2">
+                <div class="data-item"><div class="d-label">Local Time</div><div class="d-value" id="v_time">12:00 PM</div></div>
+                <div class="data-item"><div class="d-label">Altitude</div><div class="d-value" id="v_alt">0.0°</div></div>
+                <div class="data-item"><div class="d-label">True Zenith Dist.</div><div class="d-value" id="v_zd">0.0°</div></div>
+                <div class="data-item"><div class="d-label">Arc Reading</div><div class="d-value d-highlight" id="v_arc">—</div></div>
+            </div>
+            <div class="status-text" id="v_status">Awaiting solar noon...</div>
+        </div>
+    </div>
+
+    <div class="panel controls">
+        <div class="slider-row">
+            <div class="s-label">SOLAR LONGITUDE (Year)</div>
+            <input type="range" id="sl_lon" min="0" max="360" step="0.5" value="90">
+            <div class="s-val" id="t_lon">90.0°</div>
+        </div>
+        <div class="slider-row">
+            <div class="s-label">LOCAL TIME (Day)</div>
+            <input type="range" id="sl_time" min="0" max="1" step="0.001" value="0.5">
+            <div class="s-val" id="t_time">12:00 PM</div>
+        </div>
+        <div class="btn-row">
+            <button id="btn_pday" onclick="togglePlayDay()">▶ PLAY DAY</button>
+            <button id="btn_pyear" onclick="togglePlayYear()">▶ PLAY YEAR</button>
+            <button onclick="setView(0)">EXTERIOR</button>
+            <button onclick="setView(1)">CHAMBER</button>
+            <button onclick="setView(2)">ARC FOCUS</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// Astronomical Constants
+const LAT = 26.92 * Math.PI / 180; // Jaipur Latitude
+const OBLIQUITY = 23.44 * Math.PI / 180; // Earth axial tilt
+const ZODIAC_SIGNS = [
+    "Aries (Mesha)", "Taurus (Vrishabha)", "Gemini (Mithuna)", "Cancer (Karka)", 
+    "Leo (Simha)", "Virgo (Kanya)", "Libra (Tula)", "Scorpio (Vrischika)", 
+    "Sagittarius (Dhanu)", "Capricorn (Makara)", "Aquarius (Kumbha)", "Pisces (Meena)"
+];
+const SHASTHAMSA_NAMES = ["1st", "2nd", "3rd", "4th", "5th", "6th"];
+
+// 3D Setup Variables
+let scene, camera, renderer, hemiLight, dirLight;
+let sunMesh, sunImageGroup, beamMesh;
+let arcSegments = [];
+let animDay = false, animYear = false;
+
+// Geometry Constants
+const ARC_RADIUS = 40;
+const PINHOLE_Y = 48;
+const BASE_Y = PINHOLE_Y - ARC_RADIUS; // 8
+
+const VIEWS = [
+    { x: -50, y: 35, z: 60, tx: 0, ty: 25, tz: 15 }, // Exterior
+    { x: -12, y: 15, z: 30, tx: 0, ty: 15, tz: 10 }, // Chamber Inside
+    { x: -8,  y: 12, z: 12, tx: 0, ty: 10, tz: -5 }  // Arc Focus
+];
+let currentView = 0;
+let camPos = new THREE.Vector3(), camTarget = new THREE.Vector3();
+
+// Initialize
+function init() {
+    const cv = document.getElementById('c');
+    renderer = new THREE.WebGLRenderer({canvas: cv, antialias: true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0B101A);
+    
+    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.5, 1000);
+    setView(0, true);
+
+    // Lighting
+    scene.add(new THREE.AmbientLight(0x1e293b, 0.4));
+    hemiLight = new THREE.HemisphereLight(0x38bdf8, 0x0f172a, 0.5);
+    scene.add(hemiLight);
+
+    dirLight = new THREE.DirectionalLight(0xfff5e0, 2.0);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.set(2048, 2048);
+    dirLight.shadow.camera.near = 10;
+    dirLight.shadow.camera.far = 300;
+    const d = 80;
+    dirLight.shadow.camera.left = -d; dirLight.shadow.camera.right = d;
+    dirLight.shadow.camera.top = d; dirLight.shadow.camera.bottom = -d;
+    scene.add(dirLight);
+
+    buildObservatory();
+    
+    // Event Listeners
+    window.addEventListener('resize', onResize);
+    document.getElementById('sl_lon').addEventListener('input', updateCalc);
+    document.getElementById('sl_time').addEventListener('input', updateCalc);
+
+    // Interaction for camera orbit
+    let isDragging = false, prevX, prevY;
+    cv.addEventListener('mousedown', e => { isDragging = true; prevX = e.clientX; prevY = e.clientY; });
+    window.addEventListener('mouseup', () => isDragging = false);
+    window.addEventListener('mousemove', e => {
+        if(!isDragging) return;
+        let dx = e.clientX - prevX, dy = e.clientY - prevY;
+        let v = VIEWS[currentView];
+        v.tx -= dx * 0.1; v.ty += dy * 0.1;
+        prevX = e.clientX; prevY = e.clientY;
+    });
+
+    updateCalc();
+    animate();
+}
+
+function buildObservatory() {
+    // Materials
+    const matWallExt = new THREE.MeshStandardMaterial({color: 0x94a3b8, roughness: 0.9});
+    const matWallInt = new THREE.MeshStandardMaterial({color: 0x0f172a, roughness: 1.0}); // Pitch dark interior
+    const matFloor = new THREE.MeshStandardMaterial({color: 0x1e293b, roughness: 0.8});
+    const matBrass = new THREE.MeshStandardMaterial({color: 0xfbbf24, metalness: 0.8, roughness: 0.2});
+    const matArcWhite = new THREE.MeshStandardMaterial({color: 0xf8fafc, roughness: 0.4});
+    const matArcTick = new THREE.MeshStandardMaterial({color: 0x334155, roughness: 0.7});
+
+    // Outer Platform
+    let platform = new THREE.Mesh(new THREE.BoxGeometry(100, 2, 100), matFloor);
+    platform.position.y = -1;
+    platform.receiveShadow = true;
+    scene.add(platform);
+
+    // Chamber Dimensions
+    const w = 18, h = 55, depth = 48; // Z goes from -4 to 44
+    
+    // Walls (BoxGeometry: w, h, d)
+    const walls = [
+        {w: 2, h: h, d: depth, x: -w/2-1, y: h/2, z: depth/2 - 4}, // West
+        {w: 2, h: h, d: depth, x: w/2+1, y: h/2, z: depth/2 - 4},  // East
+        {w: w+4, h: h, d: 2, x: 0, y: h/2, z: depth - 3},          // North
+        {w: w+4, h: h, d: 2, x: 0, y: h/2, z: -5},                 // South (Pinhole wall)
+        {w: w+4, h: 2, d: depth+4, x: 0, y: h+1, z: depth/2 - 4}   // Roof
+    ];
+
+    walls.forEach(wd => {
+        let mesh = new THREE.Mesh(new THREE.BoxGeometry(wd.w, wd.h, wd.d), matWallExt);
+        mesh.position.set(wd.x, wd.y, wd.z);
+        mesh.castShadow = true; mesh.receiveShadow = true;
+        scene.add(mesh);
+        
+        // Dark interior lining
+        let intMesh = new THREE.Mesh(new THREE.BoxGeometry(wd.w-0.2, wd.h-0.2, wd.d-0.2), matWallInt);
+        intMesh.position.set(wd.x, wd.y, wd.z);
+        scene.add(intMesh);
+    });
+
+    // Pinhole Object
+    let pinhole = new THREE.Mesh(new THREE.TorusGeometry(0.8, 0.2, 8, 16), matBrass);
+    pinhole.position.set(0, PINHOLE_Y, -3.9);
+    scene.add(pinhole);
+
+    // 60° Circular Arc (Radius 40, centered at Pinhole)
+    // Runs from Zenith (0°, pointing straight down to Y=8) to 60° North (Z axis)
+    for(let deg = 0; deg <= 60; deg += 0.5) {
+        let rad = deg * Math.PI / 180;
+        let cy = PINHOLE_Y - ARC_RADIUS * Math.cos(rad);
+        let cz = -4 + ARC_RADIUS * Math.sin(rad); // Pinhole Z is approx -4
+
+        let isMajor = (deg % 5 === 0);
+        let isWhole = (deg % 1 === 0);
+        
+        // Main block
+        let blockGeo = new THREE.BoxGeometry(12, 0.8, isMajor ? 0.8 : (isWhole ? 0.6 : 0.4));
+        let blockMat = isMajor ? matArcWhite : (isWhole ? matArcWhite : new THREE.MeshStandardMaterial({color: 0xcbd5e1}));
+        let block = new THREE.Mesh(blockGeo, blockMat);
+        
+        block.position.set(0, cy, cz);
+        block.rotation.x = rad; // Face the pinhole
+        block.receiveShadow = true;
+        scene.add(block);
+
+        // Tick mark
+        if(isWhole) {
+            let tick = new THREE.Mesh(new THREE.BoxGeometry(12.2, 0.9, 0.2), matArcTick);
+            tick.position.set(0, cy, cz);
+            tick.rotation.x = rad;
+            scene.add(tick);
+        }
+
+        arcSegments.push({mesh: block, deg: deg, pos: new THREE.Vector3(0, cy, cz)});
+    }
+
+    // Outer Sun
+    sunMesh = new THREE.Mesh(new THREE.SphereGeometry(4, 16, 16), new THREE.MeshBasicMaterial({color: 0xffdd44}));
+    scene.add(sunMesh);
+
+    // Inner Chamber Light Beam & Projection
+    sunImageGroup = new THREE.Group();
+    let imgGlow = new THREE.Mesh(new THREE.CircleGeometry(1.5, 32), new THREE.MeshBasicMaterial({color: 0xffea80, transparent: true, opacity: 0.8, side: THREE.DoubleSide}));
+    let imgCore = new THREE.Mesh(new THREE.CircleGeometry(0.6, 16), new THREE.MeshBasicMaterial({color: 0xffffff, transparent: true, opacity: 1.0, side: THREE.DoubleSide}));
+    sunImageGroup.add(imgGlow); sunImageGroup.add(imgCore);
+    scene.add(sunImageGroup);
+
+    beamMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 1.5, 1, 16), new THREE.MeshBasicMaterial({color: 0xffd700, transparent: true, opacity: 0.15, side: THREE.DoubleSide, blending: THREE.AdditiveBlending}));
+    scene.add(beamMesh);
+}
+
+// Math & Updates
+function updateCalc() {
+    let slon = parseFloat(document.getElementById('sl_lon').value);
+    let time = parseFloat(document.getElementById('sl_time').value); // 0 = 6AM, 0.5 = Noon, 1 = 6PM
+    
+    // Ecliptic calculations
+    let L_rad = slon * Math.PI / 180;
+    let sinDec = Math.sin(OBLIQUITY) * Math.sin(L_rad);
+    let dec_rad = Math.asin(sinDec);
+    let dec_deg = dec_rad * 180 / Math.PI;
+
+    // Astrological calculations (Shasthamsa)
+    let signIdx = Math.floor(slon / 30) % 12;
+    let degInSign = slon % 30;
+    let shasIdx = Math.floor(degInSign / 5);
+    let shasName = SHASTHAMSA_NAMES[shasIdx];
+
+    // Local Observatory Calculations (Altazimuth)
+    let HA_deg = (time - 0.5) * 180; // Hour angle (-90 to +90)
+    let HA_rad = HA_deg * Math.PI / 180;
+    
+    let sinAlt = Math.sin(LAT)*Math.sin(dec_rad) + Math.cos(LAT)*Math.cos(dec_rad)*Math.cos(HA_rad);
+    let alt_rad = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
+    let alt_deg = alt_rad * 180 / Math.PI;
+    
+    let cosAz = (Math.sin(dec_rad) - Math.sin(LAT)*sinAlt) / (Math.cos(LAT)*Math.cos(alt_rad));
+    let az_rad = Math.acos(Math.max(-1, Math.min(1, cosAz)));
+    if (HA_deg > 0) az_rad = 2*Math.PI - az_rad; // Afternoon
+
+    let isDay = alt_deg > 0;
+    let trueZD = 90 - alt_deg;
+
+    // Update Sun Position
+    let R = 200;
+    let sunX = R * Math.cos(alt_rad) * Math.sin(az_rad - Math.PI);
+    let sunY = R * Math.sin(alt_rad);
+    let sunZ = R * Math.cos(alt_rad) * Math.cos(az_rad - Math.PI); // -Z is South
+    
+    dirLight.position.set(sunX, Math.max(0, sunY), sunZ);
+    sunMesh.position.copy(dirLight.position);
+    sunMesh.visible = isDay;
+
+    // Zenith Distance at exact Noon (Meridian Transit)
+    let noonZD = (LAT - dec_rad) * 180 / Math.PI; 
+
+    // Determine if projection hits the arc
+    // Chamber slot is narrow. Light only enters when HA is very close to 0
+    let isMeridian = isDay && Math.abs(HA_deg) < 5; // Within 5 degrees of noon
+    let hitArc = isMeridian && noonZD >= 0 && noonZD <= 60;
+    
+    let intensity = isMeridian ? Math.max(0, 1 - Math.abs(HA_deg)/5) : 0;
+
+    if (hitArc && intensity > 0.05) {
+        let hitRad = noonZD * Math.PI / 180;
+        let pZ = -4 + ARC_RADIUS * Math.sin(hitRad);
+        let pY = PINHOLE_Y - ARC_RADIUS * Math.cos(hitRad);
+        
+        sunImageGroup.position.set(0, pY, pZ);
+        sunImageGroup.rotation.x = hitRad; // lay flat on arc surface
+        sunImageGroup.visible = true;
+        
+        sunImageGroup.children[0].material.opacity = 0.8 * intensity;
+        sunImageGroup.children[1].material.opacity = 1.0 * intensity;
+
+        // Beam
+        let pinPos = new THREE.Vector3(0, PINHOLE_Y, -4);
+        let dist = ARC_RADIUS;
+        beamMesh.scale.y = dist;
+        beamMesh.position.copy(pinPos).add(sunImageGroup.position).multiplyScalar(0.5);
+        beamMesh.rotation.x = hitRad - Math.PI/2;
+        beamMesh.visible = true;
+        beamMesh.material.opacity = 0.15 * intensity;
+
+        document.getElementById('v_arc').textContent = noonZD.toFixed(2) + '°';
+        document.getElementById('v_status').textContent = `IMAGE FORMED AT ${noonZD.toFixed(1)}° Z.D.`;
+        document.getElementById('v_status').style.color = "#34D399";
+    } else {
+        sunImageGroup.visible = false;
+        beamMesh.visible = false;
+        document.getElementById('v_arc').textContent = "—";
+        document.getElementById('v_status').textContent = !isDay ? "Nighttime" : (Math.abs(HA_deg) < 5 ? "Sun is outside 0°-60° arc range" : "Awaiting solar noon meridian transit");
+        document.getElementById('v_status').style.color = "#FBBF24";
+    }
+
+    // UI Updates
+    document.getElementById('v_lon').textContent = slon.toFixed(1) + '°';
+    document.getElementById('v_dec').textContent = (dec_deg >= 0 ? '+' : '') + dec_deg.toFixed(2) + '°';
+    document.getElementById('v_sign').textContent = ZODIAC_SIGNS[signIdx];
+    document.getElementById('v_shas').textContent = `${shasName} (${shasIdx*5}° - ${shasIdx*5 + 5}°)`;
+    
+    document.getElementById('v_alt').textContent = isDay ? alt_deg.toFixed(1) + '°' : 'Below Horizon';
+    document.getElementById('v_zd').textContent = isDay ? trueZD.toFixed(1) + '°' : '—';
+    
+    let hrs = 6 + time * 12;
+    let h = Math.floor(hrs);
+    let m = Math.floor((hrs % 1) * 60);
+    let ap = h >= 12 ? 'PM' : 'AM';
+    let dh = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+    document.getElementById('v_time').textContent = `${dh}:${m.toString().padStart(2, '0')} ${ap}`;
+    
+    document.getElementById('t_lon').textContent = slon.toFixed(1) + '°';
+    document.getElementById('t_time').textContent = document.getElementById('v_time').textContent;
+}
+
+// Controls
+function togglePlayDay() {
+    animDay = !animDay;
+    let btn = document.getElementById('btn_pday');
+    btn.textContent = animDay ? "⏸ PAUSE DAY" : "▶ PLAY DAY";
+    btn.className = animDay ? "btn-active" : "";
+}
+
+function togglePlayYear() {
+    animYear = !animYear;
+    let btn = document.getElementById('btn_pyear');
+    btn.textContent = animYear ? "⏸ PAUSE YEAR" : "▶ PLAY YEAR";
+    btn.className = animYear ? "btn-active" : "";
+    
+    // Automatically jump to noon to see the arc clearly when animating year
+    if(animYear) {
+        document.getElementById('sl_time').value = 0.5;
+        updateCalc();
+    }
+}
+
+function setView(idx, instant = false) {
+    currentView = idx;
+    let v = VIEWS[idx];
+    if(instant) {
+        camPos.set(v.x, v.y, v.z);
+        camTarget.set(v.tx, v.ty, v.tz);
+    }
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+
+    if (animDay) {
+        let t = parseFloat(document.getElementById('sl_time').value);
+        t += 0.002;
+        if (t > 1) t = 0;
+        document.getElementById('sl_time').value = t;
+        updateCalc();
+    }
+    if (animYear) {
+        let l = parseFloat(document.getElementById('sl_lon').value);
+        l += 0.5;
+        if (l >= 360) l = 0;
+        document.getElementById('sl_lon').value = l;
+        updateCalc();
+    }
+
+    // Smooth camera interpolation
+    let v = VIEWS[currentView];
+    camPos.lerp(new THREE.Vector3(v.x, v.y, v.z), 0.05);
+    camTarget.lerp(new THREE.Vector3(v.tx, v.ty, v.tz), 0.05);
+    
+    camera.position.copy(camPos);
+    camera.lookAt(camTarget);
+
+    renderer.render(scene, camera);
+}
+
+function onResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+window.onload = init;
+</script>
+</body>
+</html>

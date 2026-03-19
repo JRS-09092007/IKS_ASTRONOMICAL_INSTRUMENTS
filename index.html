@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IKS Virtual Lab - ISRO Mode</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI';
+    background: radial-gradient(circle, #020617, #000);
+    color: cyan;
+    overflow-x: hidden;
+}
+
+/* STARFIELD */
+canvas#stars {
+    position: fixed;
+    z-index: -1;
+}
+
+/* HEADER */
+h1 {
+    text-align: center;
+    padding: 15px;
+}
+
+/* DASHBOARD */
+.dashboard {
+    display: flex;
+    justify-content: space-around;
+    padding: 10px;
+    background: rgba(0,255,255,0.05);
+}
+
+/* SUN */
+#sun {
+    position: absolute;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: radial-gradient(circle, yellow, orange);
+    box-shadow: 0 0 40px orange;
+}
+
+/* COMPASS */
+#compass {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    width: 120px;
+    height: 120px;
+    border: 2px solid cyan;
+    border-radius: 50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+/* GRID */
+.container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px,1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.card {
+    background: rgba(0,255,255,0.05);
+    border: 1px solid cyan;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.card img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+}
+
+/* PLANETS */
+.planet {
+    position: absolute;
+    border-radius: 50%;
+}
+
+</style>
+</head>
+
+<body>
+
+<canvas id="stars"></canvas>
+
+<h1>🚀 IKS VIRTUAL LAB (ISRO MODE)</h1>
+
+<div class="dashboard">
+    <div>Time: <span id="time"></span></div>
+    <div>Azimuth: <span id="azimuth"></span></div>
+    <div>Altitude: <span id="altitude"></span></div>
+</div>
+
+<div id="sun"></div>
+
+<div id="compass">🧭</div>
+
+<canvas id="graph" height="100"></canvas>
+
+<!-- PLANETS -->
+<div class="planet" id="earth" style="width:20px;height:20px;background:blue;"></div>
+<div class="planet" id="mars" style="width:15px;height:15px;background:red;"></div>
+
+<div class="container">
+
+<div class="card" onclick="openPage('samrat_yantra.html')">
+<img src="samrat_yantra.png"><h3>Samrat</h3></div>
+
+<div class="card" onclick="openPage('jai_prakash_yantra.html')">
+<img src="jai_prakash_yantra.png"><h3>Jai Prakash</h3></div>
+
+<div class="card" onclick="openPage('ram_yantra.html')">
+<img src="ram_yantra.png"><h3>Ram</h3></div>
+
+<div class="card" onclick="openPage('nadivalaya_yantra.html')">
+<img src="nadivalaya_yantra.png"><h3>Nadivalaya</h3></div>
+
+<div class="card" onclick="openPage('dakshinottar_bhitti_yantra.html')">
+<img src="dakshinottar_bhitti_yantra.png"><h3>Dakshinottar</h3></div>
+
+<div class="card" onclick="openPage('digamsa_yantra.html')">
+<img src="digamsa_yantra.png"><h3>Digamsa</h3></div>
+
+<div class="card" onclick="openPage('shasthamsa_yantra.html')">
+<img src="shasthamsa_yantra.png"><h3>Shasthamsa</h3></div>
+
+</div>
+
+<script>
+/* 🌍 PUNE COORDINATES */
+const lat = 18.5204;
+const lon = 73.8567;
+
+/* TIME + SUN POSITION */
+function updateSun() {
+    let now = new Date();
+    document.getElementById("time").innerText = now.toLocaleTimeString();
+
+    let hours = now.getHours() + now.getMinutes()/60;
+
+    let azimuth = (hours / 24) * 360;
+    let altitude = Math.sin(hours/24 * Math.PI) * 90;
+
+    document.getElementById("azimuth").innerText = azimuth.toFixed(2);
+    document.getElementById("altitude").innerText = altitude.toFixed(2);
+
+    let x = (azimuth/360)*window.innerWidth;
+    let y = window.innerHeight - (altitude/90)*400;
+
+    let sun = document.getElementById("sun");
+    sun.style.left = x + "px";
+    sun.style.top = y + "px";
+}
+setInterval(updateSun,1000);
+
+/* 📈 GRAPH */
+let ctx = document.getElementById("graph");
+let data = [];
+let labels = [];
+
+let chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'Sun Altitude',
+            data: data
+        }]
+    }
+});
+
+setInterval(()=>{
+    let t = new Date().toLocaleTimeString();
+    let alt = document.getElementById("altitude").innerText;
+
+    labels.push(t);
+    data.push(alt);
+
+    if(labels.length>10){labels.shift();data.shift();}
+    chart.update();
+},2000);
+
+/* 🛰️ PLANETS */
+function orbit(){
+    let t = Date.now()/1000;
+
+    document.getElementById("earth").style.left = 300 + Math.cos(t)*100 + "px";
+    document.getElementById("earth").style.top = 300 + Math.sin(t)*100 + "px";
+
+    document.getElementById("mars").style.left = 300 + Math.cos(t*0.7)*150 + "px";
+    document.getElementById("mars").style.top = 300 + Math.sin(t*0.7)*150 + "px";
+}
+setInterval(orbit,50);
+
+/* 🎙️ JARVIS */
+function speak(msg){
+    let speech = new SpeechSynthesisUtterance(msg);
+    speech.lang="en-US";
+    window.speechSynthesis.speak(speech);
+}
+
+function startJarvis(){
+    let rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    rec.start();
+
+    rec.onresult = (e)=>{
+        let cmd = e.results[0][0].transcript.toLowerCase();
+
+        speak("Opening " + cmd);
+
+        if(cmd.includes("samrat")) openPage('samrat_yantra.html');
+        if(cmd.includes("ram")) openPage('ram_yantra.html');
+        if(cmd.includes("jai")) openPage('jai_prakash_yantra.html');
+    };
+}
+
+/* NAV */
+function openPage(p){ window.location.href=p; }
+
+/* AUTO GREET */
+speak("Welcome to IKS Virtual Lab");
+</script>
+
+</body>
+</html>

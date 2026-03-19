@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Samrat Yantra - True Architectural Structure</title>
+    <style>
+        body { margin: 0; background: #0f172a; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
+        .container { position: relative; width: 100vw; height: 100vh; background: #000; overflow: hidden; }
+        #c { width: 100%; height: 100%; display: block; outline: none; }
+        
+        /* Overlay UI */
+        .header { position: absolute; top: 0; left: 0; right: 0; padding: 24px 30px; background: linear-gradient(rgba(15,23,42,0.9) 0%, transparent 100%); pointer-events: none; z-index: 10; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        .title { font-family: "Georgia", serif; font-size: 28px; font-weight: bold; color: #f8fafc; letter-spacing: 5px; text-transform: uppercase; }
+        .subtitle { font-size: 12px; color: #cbd5e1; letter-spacing: 2px; margin-top: 6px; font-weight: 600; text-transform: uppercase;}
+        
+        .panel { position: absolute; top: 24px; right: 30px; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.15); border-radius: 16px; padding: 20px; width: 240px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); z-index: 10; color: #f1f5f9; }
+        .clock { font-family: "Georgia", serif; font-size: 36px; font-weight: bold; color: #ffffff; text-align: center; letter-spacing: 1px; text-shadow: 0 2px 15px rgba(255, 255, 255, 0.4); }
+        .clock-label { font-size: 10px; color: #cbd5e1; text-align: center; letter-spacing: 1.5px; margin-bottom: 16px; text-transform: uppercase; font-weight: 700; }
+        
+        .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .data-cell { background: rgba(30, 41, 59, 0.6); border-radius: 8px; padding: 10px; border: 1px solid rgba(255,255,255,0.05); }
+        .data-label { font-size: 9px; color: #94a3b8; letter-spacing: 0.5px; text-transform: uppercase; font-weight: 700; margin-bottom: 4px; }
+        .data-value { font-size: 15px; color: #f8fafc; font-family: "Georgia", serif; font-weight: bold; }
+        
+        .controls { position: absolute; bottom: 0; left: 0; right: 0; padding: 30px; background: linear-gradient(transparent, rgba(15,23,42,0.95) 70%); display: flex; flex-direction: column; gap: 14px; z-index: 10; align-items: center;}
+        .controls-inner { max-width: 650px; width: 100%; display: flex; flex-direction: column; gap: 14px; }
+        
+        .slider-row { display: flex; gap: 16px; align-items: center; background: rgba(30, 41, 59, 0.7); padding: 12px 20px; border-radius: 12px; backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        .slider-label { font-size: 11px; color: #e2e8f0; font-weight: 700; white-space: nowrap; width: 60px; text-align: right; letter-spacing: 0.5px; text-transform: uppercase; }
+        input[type="range"] { flex: 1; -webkit-appearance: none; height: 6px; background: #475569; border-radius: 3px; outline: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #ffffff; cursor: pointer; box-shadow: 0 0 15px rgba(255, 255, 255, 0.8); transition: transform 0.1s; }
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+        input[type="range"]:disabled::-webkit-slider-thumb { background: #64748b; box-shadow: none; cursor: not-allowed; }
+        
+        .btn-row { display: flex; gap: 10px; justify-content: center; }
+        button { flex: 1; padding: 12px; font-size: 11px; font-weight: 700; cursor: pointer; background: rgba(30,41,59,0.8); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; color: #cbd5e1; letter-spacing: 1px; transition: all 0.2s; backdrop-filter: blur(4px); text-transform: uppercase; }
+        button:hover { background: rgba(71,85,105,0.9); border-color: rgba(255,255,255,0.4); color: #fff; transform: translateY(-1px); }
+        button.active { background: #ea580c; border-color: #fb923c; color: white; box-shadow: 0 4px 20px rgba(234, 88, 12, 0.5); text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+        
+        .hint { text-align: center; font-size: 11px; color: #94a3b8; letter-spacing: 0.5px; margin-top: 4px; font-weight: 500; text-shadow: 0 1px 2px rgba(0,0,0,0.8);}
+        
+        @media (max-width: 768px) {
+            .panel { top: 80px; right: 10px; width: calc(100% - 44px); display: flex; flex-direction: row; align-items: center; justify-content: space-between; padding: 12px; }
+            .data-grid { display: none; }
+            .clock-label { margin-bottom: 0; }
+            .controls { padding: 16px 12px; }
+            .btn-row { flex-wrap: wrap; }
+            button { flex-basis: 45%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <canvas id="c"></canvas>
+
+    <div class="header">
+        <div class="title">SAMRAT YANTRA</div>
+        <div class="subtitle">Jaipur Observatory · Lat 26.9°N</div>
+    </div>
+
+    <div class="panel">
+        <div>
+            <div class="clock" id="clk">12:00 PM</div>
+            <div class="clock-label" id="note">Solar Noon</div>
+        </div>
+        <div class="data-grid">
+            <div class="data-cell"><div class="data-label">ALTITUDE</div><div class="data-value" id="va">—</div></div>
+            <div class="data-cell"><div class="data-label">AZIMUTH</div><div class="data-value" id="vz">—</div></div>
+            <div class="data-cell"><div class="data-label">HOUR ∠</div><div class="data-value" id="vh">—</div></div>
+            <div class="data-cell"><div class="data-label">DECL</div><div class="data-value" id="vd">—</div></div>
+        </div>
+        <div style="margin-top: 14px; font-size: 10px; color: #94a3b8; text-align: center; font-weight: 600;" id="eot-note">Equation of Time: 0.0 min</div>
+    </div>
+
+    <div class="controls">
+        <div class="controls-inner">
+            <div class="slider-row">
+                <span class="slider-label">TIME</span>
+                <input type="range" id="tsl" min="0" max="1" step="0.001" value="0.5">
+                <span class="slider-label" style="text-align: left;">18:00</span>
+            </div>
+            <div class="slider-row">
+                <span class="slider-label">SEASON</span>
+                <input type="range" id="dsl" min="-23.5" max="23.5" step="0.1" value="0">
+                <span class="slider-label" style="text-align: left;">Summer</span>
+            </div>
+            <div class="btn-row">
+                <button id="liveBtn" onclick="setMode('LIVE')" class="active">● LIVE (IST)</button>
+                <button id="animBtn" onclick="setMode('ANIM')">▶ ANIMATE</button>
+                <button onclick="setView(0)">FRONT</button>
+                <button onclick="setView(2)">PROFILE</button>
+            </div>
+            <div class="hint">Drag to Rotate · Right-Click to Pan · Scroll to Zoom</div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════
+   SAMRAT YANTRA — Photorealistic Architectural Engine
+═══════════════════════════════════════════════════════ */
+
+const LAT = 26.926 * Math.PI / 180;
+const LON_JAIPUR = 75.824;
+const LON_IST = 82.5;
+
+// Structural Dimensions (Scaled for realism)
+const GB = 140; // Gnomon Base length
+const GH = GB * Math.tan(LAT); // Gnomon Height (~71m in internal units)
+const GT = 16; // Gnomon Total Thickness
+const QR = GH * 1.35; // Quadrant Radius
+const QW = 90; // Quadrant Width (Massive width needed to catch solstice shadows)
+
+let scene, camera, renderer, sunLight, hemi, sunMesh, shadowDot, eqGroup;
+let cam = {theta: -0.65, phi: 0.70, r: 380, tx: 0, ty: 30, tz: 0};
+let mouse = {down: false, px: 0, py: 0, btn: 0};
+
+let currentMode = 'LIVE';
+let animT = 0.5;
+
+const VIEWS = [
+    {theta: -0.65, phi: 0.70, r: 380, tx: 0, ty: 30, tz: 0},   // 0: Default
+    {theta: 0.0,   phi: 0.62, r: 400, tx: 0, ty: 40, tz: 0},   // 1: Front
+    {theta: 1.57,  phi: 0.78, r: 350, tx: 0, ty: 30, tz: 0},   // 2: Profile
+];
+
+/* ─── PROCEDURAL TEXTURES ─── */
+function makeNoiseTex(baseHex, noiseHex, w, h, alphaMult=0.15) {
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = baseHex; ctx.fillRect(0,0,w,h);
+    for(let i=0; i<w*h*0.4; i++) {
+        ctx.fillStyle = noiseHex;
+        ctx.globalAlpha = Math.random() * alphaMult;
+        ctx.fillRect(Math.random()*w, Math.random()*h, Math.random()*2+1, Math.random()*2+1);
+    }
+    const tex = new THREE.CanvasTexture(cv);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+}
+
+function makePavingTex() {
+    const cv = document.createElement('canvas');
+    const w = 1024; cv.width=w; cv.height=w;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#94a3b8'; ctx.fillRect(0,0,w,w);
+    for(let i=0; i<w*w*0.1; i++) {
+        ctx.fillStyle = Math.random()>0.5 ? '#cbd5e1' : '#64748b';
+        ctx.globalAlpha = Math.random() * 0.2;
+        ctx.fillRect(Math.random()*w, Math.random()*w, 3, 3);
+    }
+    ctx.globalAlpha = 1.0;
+    ctx.strokeStyle = '#475569'; ctx.lineWidth = 4;
+    const tiles = 12;
+    for(let i=0; i<=tiles; i++) {
+        const p = i*(w/tiles);
+        ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, w); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, p); ctx.lineTo(w, p); ctx.stroke();
+    }
+    const tex = new THREE.CanvasTexture(cv);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+}
+
+/* ─── HIGH-FIDELITY SCALE TEXTURE (FOR MASSIVE WIDE BAND) ─── */
+function mkScaleTex(isMorning) {
+    const W = 1024, H = 2048; // Wide format for a wide curved cylinder
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const c = cv.getContext('2d');
+    
+    // Marble base
+    c.fillStyle = '#f8fafc'; c.fillRect(0,0,W,H);
+    for(let i=0; i<15000; i++) {
+        c.fillStyle = '#e2e8f0'; c.globalAlpha = Math.random() * 0.2;
+        c.fillRect(Math.random()*W, Math.random()*H, 4, 4);
+    }
+    c.globalAlpha = 1.0;
+
+    c.fillStyle = '#0f172a';
+    
+    // Longitudinal tracks for declination boundaries
+    [0.05, 0.1, 0.45, 0.55, 0.9, 0.95].forEach(x => {
+        c.fillRect(W * x, 0, 4, H);
+    });
+
+    // Time markings
+    const hours = isMorning ? ['VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'] : ['VI', 'V', 'IV', 'III', 'II', 'I', 'XII'];
+    
+    for(let i=0; i<=120; i++) { // 120 subdivisions (every 3 minutes)
+        const y = (i/120) * H;
+        const isHour = i % 20 === 0;
+        const isQuarter = i % 5 === 0 && !isHour;
+        
+        c.lineWidth = isHour ? 6 : (isQuarter ? 3 : 1.5);
+        c.beginPath();
+        // Left side markings
+        c.moveTo(W*0.05, y); c.lineTo(isHour ? W*0.25 : W*0.15, y);
+        // Right side markings
+        c.moveTo(W*0.95, y); c.lineTo(isHour ? W*0.75 : W*0.85, y);
+        // Center alignment markings
+        if (isHour || isQuarter) {
+            c.moveTo(W*0.45, y); c.lineTo(W*0.55, y);
+        }
+        c.stroke();
+
+        if (isHour) {
+            const hourIdx = i / 20;
+            if(hourIdx <= 6) {
+                c.font = 'bold 52px Georgia, serif';
+                c.textAlign = 'center'; c.textBaseline = 'middle';
+                c.fillText(hours[hourIdx], W*0.35, y);
+                c.fillText(hours[hourIdx], W*0.65, y);
+            }
+        }
+    }
+    
+    // Central recessed gap/shadow (Realistic feature of the real Yantra)
+    c.fillStyle = '#cbd5e1'; 
+    c.fillRect(W*0.49, 0, W*0.02, H);
+    c.fillStyle = '#000000'; c.globalAlpha = 0.4;
+    c.fillRect(W*0.49, 0, 4, H); // Fake ambient occlusion
+    c.globalAlpha = 1.0;
+
+    const tex = new THREE.CanvasTexture(cv);
+    tex.anisotropy = renderer ? renderer.capabilities.getMaxAnisotropy() : 16;
+    return tex;
+}
+
+/* ─── MATERIALS ─── */
+let M = {};
+function mkMats() {
+    const sandTex = makeNoiseTex('#c86b4a', '#8a3a24', 512, 512, 0.25);
+    sandTex.repeat.set(5, 5);
+    M.brick = new THREE.MeshStandardMaterial({ color: 0xffffff, map: sandTex, roughness: 0.9, metalness: 0.0 });
+    
+    const marbleTex = makeNoiseTex('#f8fafc', '#cbd5e1', 512, 512, 0.1);
+    M.marble = new THREE.MeshStandardMaterial({ color: 0xffffff, map: marbleTex, roughness: 0.3, metalness: 0.1 });
+    
+    const floorTex = makePavingTex(); floorTex.repeat.set(15, 15);
+    M.ground = new THREE.MeshStandardMaterial({ color: 0xdddddd, map: floorTex, roughness: 0.8, metalness: 0.05 });
+}
+
+/* ═══════════════════════════════════════════
+   BUILD PRECISE & REALISTIC 3D GEOMETRY
+═══════════════════════════════════════════ */
+function build() {
+    // 1. Base Environment
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), M.ground);
+    floor.rotation.x = -Math.PI/2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+    
+    const plat = new THREE.Mesh(new THREE.BoxGeometry(450, 2, 400), M.brick);
+    plat.position.set(0, 1, 0); plat.receiveShadow = true; plat.castShadow = true; scene.add(plat);
+
+    // 2. TRUE STRUCTURAL GNOMON: Two flanking sandstone walls + embedded marble stairs
+    const gnomonGroup = new THREE.Group();
+    gnomonGroup.rotation.y = -Math.PI/2;
+    gnomonGroup.position.set(0, 2, GB/2);
+    scene.add(gnomonGroup);
+
+    const wallShape = new THREE.Shape();
+    wallShape.moveTo(0, 0);
+    wallShape.lineTo(GB, 0);
+    wallShape.lineTo(0, GH);
+    wallShape.closePath();
+    
+    [0.2, 0.45, 0.7].forEach(f => {
+        const cx = GB * f, aw = 14, ah = 26;
+        const hole = new THREE.Path();
+        hole.moveTo(cx - aw/2, 0); hole.lineTo(cx - aw/2, ah * 0.6);
+        hole.quadraticCurveTo(cx - aw/2, ah, cx, ah);
+        hole.quadraticCurveTo(cx + aw/2, ah, cx + aw/2, ah * 0.6);
+        hole.lineTo(cx + aw/2, 0);
+        wallShape.holes.push(hole);
+    });
+
+    const wallGeo = new THREE.ExtrudeGeometry(wallShape, {depth: GT*0.25, bevelEnabled: false});
+    const wallLeft = new THREE.Mesh(wallGeo, M.brick); wallLeft.position.z = GT/2 - GT*0.25;
+    wallLeft.castShadow = true; wallLeft.receiveShadow = true; gnomonGroup.add(wallLeft);
+    const wallRight = new THREE.Mesh(wallGeo, M.brick); wallRight.position.z = -GT/2;
+    wallRight.castShadow = true; wallRight.receiveShadow = true; gnomonGroup.add(wallRight);
+
+    // Stairs
+    const stairShape = new THREE.Shape();
+    stairShape.moveTo(0, 0); stairShape.lineTo(GB, 0);
+    const numSteps = 90; const dx = GB/numSteps, dy = GH/numSteps;
+    for (let i = 0; i < numSteps; i++) {
+        stairShape.lineTo(GB - i*dx, i*dy + dy);
+        stairShape.lineTo(GB - i*dx - dx, i*dy + dy);
+    }
+    stairShape.closePath();
+    const stairGeo = new THREE.ExtrudeGeometry(stairShape, {depth: GT*0.5, bevelEnabled: false});
+    const stairs = new THREE.Mesh(stairGeo, M.marble); stairs.position.z = -GT*0.25;
+    stairs.castShadow = true; stairs.receiveShadow = true; gnomonGroup.add(stairs);
+
+    // White Marble Trim on Hypotenuse (The actual edge casting the shadow)
+    const hypLen = Math.sqrt(GB*GB + GH*GH);
+    const trim = new THREE.Mesh(new THREE.BoxGeometry(hypLen, 1.5, GT + 1), M.marble);
+    trim.position.set(GB/2, GH/2, 0);
+    trim.rotation.z = Math.atan2(GH, GB);
+    trim.castShadow = true; trim.receiveShadow = true; gnomonGroup.add(trim);
+
+    // Chhatri (Pavilion)
+    const chGroup = new THREE.Group();
+    chGroup.position.set(0, GH + 1, 0); 
+    const cBase = new THREE.Mesh(new THREE.BoxGeometry(GT+4, 1.5, GT+4), M.marble); cBase.castShadow=true; chGroup.add(cBase);
+    for(let px of [-GT/2, GT/2]) {
+        for(let pz of [-GT/2, GT/2]) {
+            const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 7, 12), M.marble);
+            pillar.position.set(px, 4.25, pz); pillar.castShadow=true; chGroup.add(pillar);
+        }
+    }
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(GT/2 + 1.5, 24, 24, 0, Math.PI*2, 0, Math.PI/2), M.marble);
+    dome.position.y = 7.75; dome.castShadow=true; chGroup.add(dome);
+    gnomonGroup.add(chGroup);
+
+
+    // 3. EQUATORIAL QUADRANTS & ARCHED BRIDGES
+    eqGroup = new THREE.Group();
+    eqGroup.position.set(0, 2 + GH/2, 0); 
+    eqGroup.lookAt(0, 2 + GH/2 + Math.sin(LAT), -Math.cos(LAT));
+    scene.add(eqGroup);
+
+    const mornTex = mkScaleTex(true), aftTex = mkScaleTex(false);
+    
+    // Create the architectural support bridge profile (Quarter Pie with holes)
+    const bridgeShape = new THREE.Shape();
+    bridgeShape.moveTo(0, -QR - 4);
+    bridgeShape.absarc(0, 0, QR + 8, -Math.PI/2, 0, false);
+    bridgeShape.lineTo(QR + 8, -QR * 2.5); // Extend deep into the ground
+    bridgeShape.lineTo(0, -QR * 2.5);
+    bridgeShape.lineTo(0, -QR - 4);
+
+    // Add deep archway holes for structural realism
+    for(let i=1; i<=4; i++) {
+        const angle = (i/5) * (Math.PI/2);
+        const r = QR - 12; 
+        const cx = r * Math.sin(angle), cy = -r * Math.cos(angle);
+        const hole = new THREE.Path();
+        const hw = 5, hh = 14; // Arch width/height
+        hole.moveTo(cx - hw, cy - hh);
+        hole.lineTo(cx - hw, cy + hh - hw);
+        hole.absarc(cx, cy + hh - hw, hw, Math.PI, 0, false);
+        hole.lineTo(cx + hw, cy - hh);
+        bridgeShape.holes.push(hole);
+    }
+
+    const bridgeGeo = new THREE.ExtrudeGeometry(bridgeShape, {depth: QW, bevelEnabled: true, bevelThickness: 0.5, bevelSize: 0.5, curveSegments: 32});
+
+    [ {side: 1, tex: mornTex}, {side: -1, tex: aftTex} ].forEach(cfg => {
+        const qGroup = new THREE.Group();
+        
+        // 1. Arched Sandstone Bridge Support
+        const bridge = new THREE.Mesh(bridgeGeo, M.brick);
+        bridge.position.z = -QW/2;
+        if(cfg.side === -1) bridge.scale.x = -1; // Mirror for East side
+        bridge.castShadow = true; bridge.receiveShadow = true;
+        qGroup.add(bridge);
+
+        // 2. High-Precision Continuous Marble Scale Band
+        const N = 120; // High poly count for smooth curve
+        const pos = [], uvs = [], indices = [];
+        for(let i=0; i<=N; i++) {
+            const a = (i/N) * (Math.PI/2); 
+            const x = cfg.side * QR * Math.sin(a); // X position mirrors based on side
+            const y = -QR * Math.cos(a);
+            
+            // Generate UVs to read correctly (v goes from bottom to top)
+            pos.push(x, y, -QW/2); uvs.push(0, i/N);
+            pos.push(x, y, QW/2);  uvs.push(1, i/N);
+        }
+        for(let i=0; i<N; i++) {
+            const row = i*2;
+            if(cfg.side === 1) {
+                indices.push(row, row+1, row+2); indices.push(row+1, row+3, row+2);
+            } else {
+                indices.push(row, row+2, row+1); indices.push(row+1, row+2, row+3);
+            }
+        }
+        const scaleGeo = new THREE.BufferGeometry();
+        scaleGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+        scaleGeo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+        scaleGeo.setIndex(indices);
+        scaleGeo.computeVertexNormals();
+        
+        const scaleBand = new THREE.Mesh(scaleGeo, new THREE.MeshStandardMaterial({map: cfg.tex, roughness: 0.3, side: THREE.DoubleSide}));
+        scaleBand.castShadow = true; scaleBand.receiveShadow = true;
+        qGroup.add(scaleBand);
+
+        // 3. Thick marble outer rim frames
+        const rimGeo = new THREE.TorusGeometry(QR + 8, 1.5, 16, 64, Math.PI/2);
+        [-QW/2 + 1.5, QW/2 - 1.5].forEach(zOffset => {
+            const rim = new THREE.Mesh(rimGeo, M.marble);
+            rim.position.z = zOffset;
+            rim.rotation.z = cfg.side === 1 ? -Math.PI/2 : Math.PI;
+            rim.castShadow = true; rim.receiveShadow=true;
+            qGroup.add(rim);
+        });
+
+        qGroup.position.x = cfg.side * (GT/2 + 0.5); // Flush against gnomon wall
+        eqGroup.add(qGroup);
+    });
+
+
+    // 4. Glowing Red Indicator Dot (Tangent aligned overlay)
+    shadowDot = new THREE.Group();
+    const dotCenter = new THREE.Mesh(new THREE.SphereGeometry(3.5, 32, 32), new THREE.MeshBasicMaterial({color: 0xff0000}));
+    const ring1 = new THREE.Mesh(new THREE.TorusGeometry(12, 0.8, 16, 64), new THREE.MeshBasicMaterial({color: 0xff0000, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending}));
+    const ring2 = new THREE.Mesh(new THREE.TorusGeometry(20, 0.3, 16, 64), new THREE.MeshBasicMaterial({color: 0xff0000, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending}));
+    
+    // Rotate rings so they lie flat when LookAt is used
+    ring1.rotation.x = Math.PI/2; ring2.rotation.x = Math.PI/2;
+    
+    shadowDot.add(dotCenter); shadowDot.add(ring1); shadowDot.add(ring2);
+    eqGroup.add(shadowDot);
+}
+
+/* ═══════════════════════════════════════
+   ASTRONOMY & PHYSICS ENGINE
+═══════════════════════════════════════ */
+function calculateSolarPhysics(date) {
+    const start = new Date(date.getFullYear(), 0, 0);
+    const diff = date - start + (start.getTimezoneOffset() - date.getTimezoneOffset()) * 60000;
+    const dayOfYear = Math.floor(diff / 86400000);
+
+    const B = (360 / 365.24) * (dayOfYear - 81) * Math.PI / 180;
+    const declDeg = 23.44 * Math.sin(B);
+    const eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+
+    const localTimeMins = date.getHours() * 60 + date.getMinutes() + date.getSeconds() / 60;
+    const lonCorrection = 4 * (LON_JAIPUR - LON_IST); 
+    const lstMins = localTimeMins + lonCorrection + eot;
+    
+    let haDeg = (lstMins - 720) * 0.25; 
+    const t = (haDeg + 90) / 180; 
+
+    return { declDeg, eot, haDeg, t };
+}
+
+function updateSun(t, declDeg, forceHaDeg = null) {
+    const D = declDeg * Math.PI / 180;
+    const H = forceHaDeg !== null ? (forceHaDeg * Math.PI / 180) : ((t - 0.5) * Math.PI); 
+    
+    const localX = -1 * Math.cos(D) * Math.sin(H);
+    const localY = Math.cos(LAT) * Math.cos(D) * Math.cos(H) + Math.sin(LAT) * Math.sin(D);
+    const localZ = Math.sin(LAT) * Math.cos(D) * Math.cos(H) - Math.cos(LAT) * Math.sin(D);
+
+    const R = 900; 
+    sunLight.position.set(localX * R, localY * R, localZ * R);
+    if(sunMesh) sunMesh.position.copy(sunLight.position);
+
+    const sinAlt = localY; 
+    const alt = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
+    const azi = Math.atan2(localX, -localZ); 
+    
+    const isDay = alt > -0.05; 
+    const el = Math.max(0, sinAlt);
+    
+    // Cinematic Sky Gradient
+    const skyMid = new THREE.Color(0x1e3a8a); 
+    const skySet = new THREE.Color(0xf97316); 
+    const skyNight = new THREE.Color(0x020617); 
+    
+    let currentSky = new THREE.Color();
+    if(el > 0.25) currentSky.lerpColors(skySet, skyMid, (el-0.25)/0.75);
+    else if(el > 0) currentSky.lerpColors(skyNight, skySet, el/0.25);
+    else currentSky.copy(skyNight);
+
+    scene.background = currentSky;
+    scene.fog.color.copy(currentSky);
+    scene.fog.density = 0.0008 + (1-el)*0.001; 
+
+    sunLight.intensity = isDay ? 1.5 + el*2.5 : 0;
+    const sunColorSet = new THREE.Color(0xffaa55);
+    const sunColorMid = new THREE.Color(0xffffff);
+    sunLight.color.lerpColors(sunColorSet, sunColorMid, el);
+    
+    hemi.intensity = isDay ? 0.4 + el*0.6 : 0.05;
+    hemi.color.copy(currentSky);
+
+    // Indicator Dot Placement & Tangent Normal Alignment
+    const isMorn = H < 0;
+    const side = isMorn ? 1 : -1; 
+    const theta = Math.abs(H);
+    
+    if (isDay && theta < Math.PI/2 * 0.98) {
+        shadowDot.visible = true;
+        // Accurate positional tracking including extreme declination shifts across the wide band
+        shadowDot.position.set(
+            side * (GT/2 + QR * Math.sin(theta)), 
+            -QR * Math.cos(theta),                
+            -QR * Math.tan(D)                     
+        );
+        
+        // Point the dot directly at the central axis so its rings lay tangent/flat on the curve
+        shadowDot.lookAt(side * GT/2, 0, shadowDot.position.z);
+        
+        // Gently pulse the outer rings
+        const timePulse = Date.now() * 0.002;
+        shadowDot.children[1].scale.setScalar(1 + Math.sin(timePulse)*0.05);
+        shadowDot.children[2].scale.setScalar(1 + Math.cos(timePulse)*0.08);
+    } else {
+        shadowDot.visible = false;
+    }
+
+    // Update UI Elements
+    document.getElementById('va').textContent = (alt*180/Math.PI).toFixed(1) + '°';
+    let aziDeg = azi * 180/Math.PI; if(aziDeg < 0) aziDeg += 360;
+    document.getElementById('vz').textContent = aziDeg.toFixed(1) + '°';
+    document.getElementById('vh').textContent = (H*180/Math.PI).toFixed(1) + '°';
+    document.getElementById('vd').textContent = declDeg.toFixed(1) + '°';
+    
+    let hrs = 6 + t * 12;
+    if(forceHaDeg !== null) hrs = 12 + forceHaDeg / 15;
+    const h = Math.floor(hrs), m = Math.floor(Math.abs((hrs % 1) * 60));
+    const dh = ((h + 24) % 12) || 12;
+    const ap = ((h % 24 + 24) % 24) >= 12 ? 'PM' : 'AM';
+    document.getElementById('clk').textContent = `${dh}:${m.toString().padStart(2,'0')} ${ap}`;
+    
+    const noteEl = document.getElementById('note');
+    if (!isDay) noteEl.textContent = 'Nighttime';
+    else if (theta < 0.03) noteEl.textContent = 'Solar Noon';
+    else noteEl.textContent = isMorn ? 'Morning (West Quadrant)' : 'Afternoon (East Quadrant)';
+}
+
+/* ═══════════════════════════════════════
+   INITIALIZATION & LOOP
+═══════════════════════════════════════ */
+function init() {
+    const cv = document.getElementById('c');
+    renderer = new THREE.WebGLRenderer({canvas: cv, antialias: true, powerPreference: "high-performance"});
+    renderer.setSize(cv.clientWidth, cv.clientHeight, false);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1; 
+
+    scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x1e3a8a, 0.001); 
+    
+    camera = new THREE.PerspectiveCamera(40, cv.clientWidth/cv.clientHeight, 1, 4000);
+
+    hemi = new THREE.HemisphereLight(0xffffff, 0x444455, 0.6);
+    scene.add(hemi);
+
+    sunLight = new THREE.DirectionalLight(0xffffff, 3.0);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.set(4096, 4096); 
+    const d = 350; // Increased shadow bounds for the massive wide quadrants
+    sunLight.shadow.camera.left = -d; sunLight.shadow.camera.right = d;
+    sunLight.shadow.camera.top = d; sunLight.shadow.camera.bottom = -d;
+    sunLight.shadow.camera.near = 100; sunLight.shadow.camera.far = 2000;
+    sunLight.shadow.bias = -0.0005; 
+    scene.add(sunLight);
+
+    const sunMat = new THREE.MeshBasicMaterial({color: 0xffffee, fog: false});
+    sunMesh = new THREE.Mesh(new THREE.SphereGeometry(30, 32, 32), sunMat);
+    scene.add(sunMesh);
+
+    mkMats(); build();
+
+    const addEvt = (tgt, evt, cb, opts) => tgt.addEventListener(evt, cb, opts);
+    addEvt(cv, 'mousedown', e => { mouse.down = true; mouse.px = e.clientX; mouse.py = e.clientY; mouse.btn = e.button; });
+    addEvt(window, 'mouseup', () => mouse.down = false);
+    addEvt(window, 'mousemove', e => {
+        if(!mouse.down) return;
+        const dx = e.clientX - mouse.px, dy = e.clientY - mouse.py;
+        if(e.buttons === 2 || mouse.btn === 2) { cam.tx -= dx*0.2; cam.ty += dy*0.2; }
+        else { cam.theta -= dx*0.005; cam.phi = Math.max(0.05, Math.min(Math.PI*0.48, cam.phi+dy*0.005)); }
+        mouse.px = e.clientX; mouse.py = e.clientY;
+    });
+    addEvt(cv, 'wheel', e => { cam.r = Math.max(150, Math.min(1000, cam.r + e.deltaY*0.4)); e.preventDefault(); }, {passive: false});
+    addEvt(cv, 'contextmenu', e => e.preventDefault());
+    
+    addEvt(cv, 'touchstart', e => { if(e.touches.length===1) {mouse.down=true; mouse.px=e.touches[0].clientX; mouse.py=e.touches[0].clientY; mouse.btn=0;} }, {passive: true});
+    addEvt(window, 'touchend', () => mouse.down = false);
+    addEvt(cv, 'touchmove', e => {
+        if(mouse.down && e.touches.length===1) {
+            const dx = e.touches[0].clientX - mouse.px, dy = e.touches[0].clientY - mouse.py;
+            cam.theta -= dx*0.006; cam.phi = Math.max(0.05, Math.min(Math.PI*0.48, cam.phi+dy*0.006));
+            mouse.px = e.touches[0].clientX; mouse.py = e.touches[0].clientY;
+        }
+    }, {passive: true});
+
+    document.getElementById('tsl').addEventListener('input', e => { setMode('MANUAL'); updateSun(+e.target.value, +document.getElementById('dsl').value); });
+    document.getElementById('dsl').addEventListener('input', e => { setMode('MANUAL'); updateSun(+document.getElementById('tsl').value, +e.target.value); });
+
+    setMode('LIVE');
+    loop();
+}
+
+function setView(i) { Object.assign(cam, VIEWS[i]); }
+
+function setMode(mode) {
+    currentMode = mode;
+    const isLive = mode === 'LIVE';
+    
+    document.getElementById('liveBtn').className = isLive ? 'active' : '';
+    document.getElementById('animBtn').className = mode === 'ANIM' ? 'active' : '';
+    document.getElementById('animBtn').textContent = mode === 'ANIM' ? '⏸ PAUSING...' : '▶ ANIMATE';
+    
+    document.getElementById('tsl').disabled = isLive || mode === 'ANIM';
+    document.getElementById('dsl').disabled = isLive;
+    
+    if (mode === 'ANIM') animT = parseFloat(document.getElementById('tsl').value);
+    if (mode === 'ANIM') document.getElementById('animBtn').textContent = '⏸ PAUSE';
+}
+
+function loop() {
+    requestAnimationFrame(loop);
+    
+    if (currentMode === 'LIVE') {
+        const physics = calculateSolarPhysics(new Date());
+        document.getElementById('tsl').value = physics.t;
+        document.getElementById('dsl').value = physics.declDeg;
+        document.getElementById('eot-note').textContent = `Equation of Time: ${physics.eot > 0 ? '+' : ''}${physics.eot.toFixed(1)} min`;
+        updateSun(physics.t, physics.declDeg, physics.haDeg);
+    } else if (currentMode === 'ANIM') {
+        animT = (animT + 0.0004) % 1; 
+        document.getElementById('tsl').value = animT;
+        updateSun(animT, +document.getElementById('dsl').value);
+    }
+
+    camera.position.set(
+        cam.tx + cam.r * Math.sin(cam.phi) * Math.cos(cam.theta),
+        cam.ty + cam.r * Math.cos(cam.phi),
+        cam.tz + cam.r * Math.sin(cam.phi) * Math.sin(cam.theta)
+    );
+    camera.lookAt(cam.tx, cam.ty, cam.tz);
+    renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+    const c = document.getElementById('c');
+    renderer.setSize(c.clientWidth, c.clientHeight, false);
+    camera.aspect = c.clientWidth / c.clientHeight;
+    camera.updateProjectionMatrix();
+});
+
+window.onload = init;
+</script>
+</body>
+</html>

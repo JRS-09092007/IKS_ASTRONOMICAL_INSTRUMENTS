@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ram Yantra 3D</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 0; background: #0f141e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
+  
+  #container { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+  canvas { width: 100%; height: 100%; display: block; outline: none; }
+
+  /* Premium Glassmorphism UI */
+  .panel {
+    position: absolute;
+    background: rgba(18, 24, 38, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 215, 120, 0.15);
+    border-radius: 16px;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+    color: #f0f0f0;
+  }
+
+  /* Top Left Header */
+  .header { top: 20px; left: 20px; padding: 16px 24px; pointer-events: none; }
+  .title { font-family: "Georgia", serif; font-size: 24px; font-weight: bold; color: #f4d068; letter-spacing: 4px; margin-bottom: 6px; }
+  .subtitle { font-size: 11px; color: #a8b4c0; letter-spacing: 1.5px; text-transform: uppercase; }
+
+  /* Top Right Dashboard */
+  .dashboard { top: 20px; right: 20px; padding: 20px; width: 220px; }
+  .clock { font-family: "Georgia", serif; font-size: 32px; font-weight: bold; color: #f4d068; text-align: center; letter-spacing: 2px; margin-bottom: 4px; }
+  .status { font-size: 11px; color: #a8b4c0; text-align: center; margin-bottom: 16px; letter-spacing: 1px; }
+  
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .data-box { background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 8px; text-align: center; }
+  .data-label { font-size: 9px; color: #8899a6; letter-spacing: 1px; margin-bottom: 4px; }
+  .data-value { font-family: "Georgia", serif; font-size: 16px; color: #f4d068; font-weight: bold; }
+  
+  .guide { font-size: 11px; color: #a8b4c0; text-align: center; line-height: 1.6; border-top: 1px solid rgba(255, 215, 120, 0.15); padding-top: 12px; }
+
+  /* Bottom Controls */
+  .controls { bottom: 20px; left: 50%; transform: translateX(-50%); padding: 20px 24px; width: 90%; max-width: 600px; display: flex; flex-direction: column; gap: 16px; }
+  
+  .slider-row { display: flex; gap: 12px; align-items: center; }
+  .slider-label { font-size: 11px; color: #a8b4c0; font-weight: 500; width: 50px; text-transform: uppercase; letter-spacing: 1px;}
+  
+  input[type="range"] {
+    flex: 1; -webkit-appearance: none; height: 4px; background: rgba(255, 215, 120, 0.2); border-radius: 2px; outline: none; cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #f4d068; box-shadow: 0 0 10px rgba(244, 208, 104, 0.5); cursor: pointer; transition: transform 0.1s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+  .btn-row { display: flex; gap: 8px; justify-content: space-between; flex-wrap: wrap; }
+  button {
+    flex: 1; min-width: 80px; padding: 10px 4px; font-size: 10px; font-weight: bold; cursor: pointer;
+    background: rgba(255, 215, 120, 0.1); border: 1px solid rgba(255, 215, 120, 0.2); border-radius: 8px;
+    color: #e0e6ed; letter-spacing: 1.5px; transition: all 0.2s;
+  }
+  button:hover { background: rgba(255, 215, 120, 0.2); color: #fff; }
+  button.active-btn { background: rgba(244, 208, 104, 0.25); border-color: #f4d068; color: #f4d068; }
+
+  .hint { text-align: center; font-size: 10px; color: #788896; letter-spacing: 1px; margin-top: 4px; }
+  
+  @media (max-width: 768px) {
+    .dashboard { top: auto; bottom: 200px; right: 50%; transform: translateX(50%); width: 90%; max-width: 320px; padding: 12px; }
+    .controls { bottom: 10px; padding: 12px; }
+    .grid { margin-bottom: 8px; }
+    .guide { display: none; }
+    .header { width: 100%; text-align: center; left: 0; padding: 12px; background: rgba(18, 24, 38, 0.8); border: none; border-bottom: 1px solid rgba(255,215,120,0.1); border-radius: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div id="container">
+  <canvas id="c"></canvas>
+
+  <div class="panel header">
+    <div class="title">RAM YANTRA</div>
+    <div class="subtitle">Jantar Mantar · Altitude & Azimuth</div>
+  </div>
+
+  <div class="panel dashboard">
+    <div class="clock" id="clk">12:00 PM</div>
+    <div class="status" id="note">Shadow at zenith</div>
+    
+    <div class="grid">
+      <div class="data-box">
+        <div class="data-label">ALTITUDE</div>
+        <div class="data-value" id="va">—</div>
+      </div>
+      <div class="data-box">
+        <div class="data-label">AZIMUTH</div>
+        <div class="data-value" id="vz">—</div>
+      </div>
+      <div class="data-box">
+        <div class="data-label">ZENITH</div>
+        <div class="data-value" id="vz2">—</div>
+      </div>
+      <div class="data-box">
+        <div class="data-label">CYLINDER</div>
+        <div class="data-value" id="vact" style="color:#68d4f4">—</div>
+      </div>
+    </div>
+    
+    <div class="guide">
+      The glowing ray demonstrates how the pillar's top edge aligns with the sun to cast a shadow.<br><br>
+      <b>Floor:</b> 90° → 45° Altitude<br>
+      <b>Wall:</b> 45° → 0° Altitude
+    </div>
+  </div>
+
+  <div class="panel controls">
+    <div class="slider-row">
+      <span class="slider-label">TIME</span>
+      <input type="range" id="tsl" min="0" max="1" step="0.001" value="0.5">
+    </div>
+    <div class="slider-row">
+      <span class="slider-label">SEASON</span>
+      <input type="range" id="dsl" min="-23.5" max="23.5" step="0.1" value="20">
+    </div>
+    
+    <div class="btn-row">
+      <button id="liveBtn" onclick="toggleLive()">🔴 LIVE</button>
+      <button id="ab" onclick="toggleAnim()">▶ PLAY</button>
+      <button onclick="setV(0)">AERIAL</button>
+      <button onclick="setV(1)">FRONT</button>
+      <button onclick="setV(2)">INSIDE A</button>
+      <button onclick="setV(3)">INSIDE B</button>
+    </div>
+    
+    <div class="hint">Left Click/Drag to Rotate · Scroll to Zoom · Right Click to Pan</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   RAM YANTRA — Accurate Astronomical Simulation
+══════════════════════════════════════════════════════════════ */
+
+const LAT = 26.92 * Math.PI/180; // Latitude of Jaipur
+
+// Exact Geometry Parameters
+const R = 46;             // Inner Radius of cylinder
+const H = R;              // Height of scale above floor (Exactly equals Radius)
+const FLOOR_H = 4;        // Height of floor above ground
+const WALL_T = 4.5;       // Wall thickness
+const PILLAR_R = 2.2;     // Radius of central pillar
+const NSECTORS = 12;      // 12 sectors per cylinder
+const Y_FLOOR = FLOOR_H + 1;  // Absolute Y of floor surface
+const Y_TOP = Y_FLOOR + H;    // Absolute Y of pillar top / wall top
+
+// Dual Cylinder setup
+const CX_A = -60, CX_B = 60, CZ = 0;
+
+let scene, camera, renderer, sunLight, hemi, sunMesh;
+let shadowDotA, shadowDotB, rayA, rayB;
+let anim = false, animT = 0.5, liveMode = false;
+
+// Interaction state
+let cam = {theta: -0.45, phi: 0.6, r: 240, tx: 0, ty: 25, tz: 0};
+let mouse = {down: false, px: 0, py: 0, btn: 0};
+
+const VIEWS = [
+  {theta: -0.45, phi: 0.60, r: 240, tx: 0, ty: 20, tz: 0},     // Aerial
+  {theta: -0.05, phi: 0.85, r: 220, tx: 0, ty: 15, tz: 40},    // Front
+  {theta: -0.75, phi: 1.15, r: 75, tx: CX_A, ty: 15, tz: 15},  // Inside A
+  {theta: -0.75, phi: 1.15, r: 75, tx: CX_B, ty: 15, tz: 15},  // Inside B
+];
+
+let M = {};
+
+/* ── INITIALIZATION ── */
+function init() {
+  const cv = document.getElementById('c');
+  const W = cv.clientWidth, H2 = cv.clientHeight;
+  
+  renderer = new THREE.WebGLRenderer({canvas: cv, antialias: true, powerPreference: 'high-performance'});
+  renderer.setSize(W, H2, false);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x182434);
+  scene.fog = new THREE.FogExp2(0x182434, 0.0015);
+
+  camera = new THREE.PerspectiveCamera(40, W/H2, 0.5, 2000);
+
+  // Lighting
+  scene.add(new THREE.AmbientLight(0xffeacc, 0.35));
+  hemi = new THREE.HemisphereLight(0xbbeeff, 0x553322, 0.4); 
+  scene.add(hemi);
+
+  sunLight = new THREE.DirectionalLight(0xfff5e0, 2.5);
+  sunLight.castShadow = true;
+  const sc = sunLight.shadow.camera;
+  sunLight.shadow.mapSize.set(4096, 4096);
+  sc.near = 10; sc.far = 1000;
+  sc.left = -180; sc.right = 180; sc.top = 180; sc.bottom = -180;
+  sunLight.shadow.bias = -0.0005;
+  scene.add(sunLight);
+  scene.add(sunLight.target);
+
+  createMaterials();
+  const fTex = createFloorTexture();
+  const wTex = createWallTexture();
+
+  // Environment
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), M.ground);
+  ground.rotation.x = -Math.PI/2; ground.position.y = -1; ground.receiveShadow = true; scene.add(ground);
+  
+  const platform = new THREE.Mesh(new THREE.BoxGeometry(280, FLOOR_H, 180), M.platform);
+  platform.position.y = FLOOR_H/2; platform.receiveShadow = true; platform.castShadow = true; scene.add(platform);
+
+  // Build the Instruments
+  buildCylinder(CX_A, 0, CZ, true, fTex, wTex);
+  buildCylinder(CX_B, 0, CZ, false, fTex, wTex);
+
+  // Sun visual
+  sunMesh = new THREE.Mesh(new THREE.SphereGeometry(12, 32, 32), new THREE.MeshBasicMaterial({color: 0xffffee}));
+  scene.add(sunMesh);
+  
+  // Create interactive indicator visuals
+  shadowDotA = createShadowDot(0xff3300);
+  shadowDotB = createShadowDot(0x00aaff);
+  rayA = createRayLine(0xffaa00);
+  rayB = createRayLine(0x00ccff);
+
+  // Event Listeners
+  cv.addEventListener('mousedown', e => { mouse.down=true; mouse.px=e.clientX; mouse.py=e.clientY; mouse.btn=e.button; });
+  window.addEventListener('mouseup', () => mouse.down=false);
+  window.addEventListener('mousemove', onMove);
+  cv.addEventListener('wheel', e => { cam.r = Math.max(30, Math.min(600, cam.r + e.deltaY * 0.2)); e.preventDefault(); }, {passive: false});
+  cv.addEventListener('contextmenu', e => e.preventDefault());
+  
+  cv.addEventListener('touchstart', e => { if(e.touches.length===1){ mouse.down=true; mouse.px=e.touches[0].clientX; mouse.py=e.touches[0].clientY; mouse.btn=0; }},{passive:true});
+  window.addEventListener('touchend', () => mouse.down=false);
+  cv.addEventListener('touchmove', e => { if(e.touches.length===1){ onMove({clientX:e.touches[0].clientX, clientY:e.touches[0].clientY, buttons:1}); e.preventDefault(); }},{passive:false});
+
+  document.getElementById('tsl').addEventListener('input', e => { if(!liveMode && !anim) updateSun(+e.target.value, +document.getElementById('dsl').value); });
+  document.getElementById('dsl').addEventListener('input', () => { if(!liveMode) updateSun(+document.getElementById('tsl').value, +document.getElementById('dsl').value); });
+
+  window.addEventListener('resize', onResize);
+
+  updateSun(0.5, 20);
+  requestAnimationFrame(loop);
+}
+
+function createMaterials() {
+  M.brick = new THREE.MeshStandardMaterial({color: 0xd86a50, roughness: 0.8});
+  M.brickD = new THREE.MeshStandardMaterial({color: 0xa84a30, roughness: 0.9});
+  M.marble = new THREE.MeshStandardMaterial({color: 0xfffcf5, roughness: 0.4});
+  M.platform = new THREE.MeshStandardMaterial({color: 0xc89a70, roughness: 0.85});
+  M.ground = new THREE.MeshStandardMaterial({color: 0x556050, roughness: 0.95});
+  M.pillar = new THREE.MeshStandardMaterial({color: 0xeddac0, roughness: 0.6});
+}
+
+function createFloorTexture() {
+  const W=1024, c=document.createElement('canvas').getContext('2d');
+  c.canvas.width=W; c.canvas.height=W;
+  c.fillStyle='#f0e8d8'; c.fillRect(0,0,W,W);
+  const cx=W/2, cy=W/2;
+  
+  // Altitude Arcs
+  for(let alt=45; alt<=90; alt+=5) {
+    const rad = ((90-alt)/45)*(W/2 - 20);
+    c.beginPath(); c.arc(cx, cy, rad, 0, Math.PI*2);
+    c.strokeStyle = alt%15===0 ? '#332211' : '#a08060';
+    c.lineWidth = alt%15===0 ? 3 : 1; c.stroke();
+    if(alt%15===0 && rad>20) {
+      c.font='bold 24px Georgia'; c.fillStyle='#332211'; c.textAlign='center';
+      c.fillText(alt+'°', cx+rad, cy-8);
+    }
+  }
+  
+  // Azimuth Lines
+  for(let az=0; az<360; az+=30) {
+    const rad = (az-90)*Math.PI/180; // offset so 0 is Up/North
+    c.strokeStyle = az%90===0 ? '#332211' : '#8a6040';
+    c.lineWidth = az%90===0 ? 3 : 1;
+    c.beginPath(); c.moveTo(cx,cy); c.lineTo(cx+Math.cos(rad)*W/2, cy+Math.sin(rad)*W/2); c.stroke();
+    if(az%30===0) {
+      c.font='22px Georgia'; c.fillStyle='#332211';
+      c.fillText(az+'°', cx+Math.cos(rad)*(W/2-30), cy+Math.sin(rad)*(W/2-30)+8);
+    }
+  }
+  return new THREE.CanvasTexture(c.canvas);
+}
+
+function createWallTexture() {
+  const W=2048, H2=512, c=document.createElement('canvas').getContext('2d');
+  c.canvas.width=W; c.canvas.height=H2;
+  c.fillStyle='#f0e8d8'; c.fillRect(0,0,W,H2);
+  
+  // Azimuth verticals
+  for(let az=0; az<=360; az+=15) {
+    const x = (az/360)*W;
+    c.strokeStyle = az%90===0 ? '#332211' : '#a08060';
+    c.lineWidth = az%90===0 ? 4 : 1.5;
+    c.beginPath(); c.moveTo(x,0); c.lineTo(x,H2); c.stroke();
+    if(az%30===0) { c.font='bold 28px Georgia'; c.fillStyle='#332211'; c.textAlign='center'; c.fillText(az+'°', x, H2-15); }
+  }
+  // Altitude horizontals (45 at bottom, 0 at top)
+  for(let alt=0; alt<=45; alt+=5) {
+    const y = H2 - (alt/45)*H2;
+    c.strokeStyle = alt%15===0 ? '#332211' : '#a08060';
+    c.lineWidth = alt%15===0 ? 3 : 1;
+    c.beginPath(); c.moveTo(0,y); c.lineTo(W,y); c.stroke();
+    if(alt%15===0 && alt>0) { c.font='26px Georgia'; c.fillStyle='#332211'; c.textAlign='left'; c.fillText(alt+'°', 10, y-10); }
+  }
+  return new THREE.CanvasTexture(c.canvas);
+}
+
+function buildCylinder(cx, cy, cz, isA, fTex, wTex) {
+  const g = new THREE.Group();
+  g.position.set(cx, cy, cz);
+
+  const matFloor = new THREE.MeshStandardMaterial({map: fTex, roughness: 0.5});
+  const matWall = new THREE.MeshStandardMaterial({map: wTex, roughness: 0.6, side: THREE.DoubleSide});
+
+  // Solid ring base
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(R+WALL_T+1, R+WALL_T+2, FLOOR_H, 64), M.brickD);
+  base.position.y = FLOOR_H/2; base.receiveShadow=true; base.castShadow=true; g.add(base);
+
+  // Outer Wall with Arches
+  const NW = 72, NA = 12;
+  const archAngles = Array.from({length:NA}, (_,i) => i*Math.PI*2/NA);
+  
+  for(let i=0; i<NW; i++) {
+    const a1 = (i/NW)*Math.PI*2, a2 = ((i+1)/NW)*Math.PI*2, mA = (a1+a2)/2;
+    const isArch = archAngles.some(aa => Math.abs(((mA-aa+Math.PI*3)%(Math.PI*2))-Math.PI) < 0.15);
+    const chord = 2*(R+WALL_T/2)*Math.sin(Math.PI/NW);
+    
+    if(isArch) {
+      const archH = H*0.6;
+      const pil = new THREE.Mesh(new THREE.BoxGeometry(1.5, H, WALL_T), M.brickD);
+      pil.position.set(Math.cos(mA-0.12)*(R+WALL_T/2), Y_FLOOR+H/2, -Math.sin(mA-0.12)*(R+WALL_T/2));
+      pil.rotation.y = mA; pil.castShadow=true; g.add(pil);
+      
+      const pil2 = pil.clone();
+      pil2.position.set(Math.cos(mA+0.12)*(R+WALL_T/2), Y_FLOOR+H/2, -Math.sin(mA+0.12)*(R+WALL_T/2));
+      g.add(pil2);
+    } else {
+      const wallSeg = new THREE.Mesh(new THREE.BoxGeometry(chord+0.2, H, WALL_T-0.5), matWall);
+      wallSeg.position.set(Math.cos(mA)*(R+WALL_T/2), Y_FLOOR+H/2, -Math.sin(mA)*(R+WALL_T/2));
+      wallSeg.rotation.y = mA; wallSeg.castShadow=true; wallSeg.receiveShadow=true; g.add(wallSeg);
+    }
+  }
+
+  // Top Coping
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(R+WALL_T/2, WALL_T/2, 8, 64), M.marble);
+  rim.rotation.x = Math.PI/2; rim.position.y = Y_TOP; rim.castShadow=true; g.add(rim);
+
+  // Raised Sectors
+  const sAngle = Math.PI*2/NSECTORS;
+  for(let i=0; i<NSECTORS; i++) {
+    if((i%2===0) !== isA) continue; // Alternate missing sectors
+    
+    const shape = new THREE.Shape();
+    shape.moveTo(0,0);
+    for(let p=0; p<=10; p++) {
+      const a = i*sAngle + (p/10)*sAngle;
+      shape.lineTo(Math.cos(a)*(R-0.2), Math.sin(a)*(R-0.2));
+    }
+    shape.lineTo(0,0);
+    
+    const hole = new THREE.Path();
+    for(let p=0; p<=10; p++) {
+      const a = i*sAngle + (p/10)*sAngle;
+      hole.lineTo(Math.cos(a)*(PILLAR_R+0.5), Math.sin(a)*(PILLAR_R+0.5));
+    }
+    shape.holes.push(hole);
+
+    const sGeo = new THREE.ExtrudeGeometry(shape, {depth: 1.5, bevelEnabled: false});
+    const sector = new THREE.Mesh(sGeo, matFloor);
+    sector.rotation.x = Math.PI/2; // Orient correctly
+    sector.position.y = Y_FLOOR;
+    sector.receiveShadow=true; sector.castShadow=true;
+    g.add(sector);
+  }
+
+  // Central Pillar
+  const pillar = new THREE.Mesh(new THREE.CylinderGeometry(PILLAR_R, PILLAR_R*1.1, Y_TOP, 32), M.pillar);
+  pillar.position.y = Y_TOP/2; pillar.castShadow=true; pillar.receiveShadow=true; g.add(pillar);
+  
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(PILLAR_R*1.5, PILLAR_R*1.2, 1, 32), M.marble);
+  cap.position.y = Y_TOP; cap.castShadow=true; g.add(cap);
+
+  scene.add(g);
+}
+
+function createShadowDot(col) {
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(1.2, 16, 16), new THREE.MeshBasicMaterial({color: col})));
+  g.add(new THREE.Mesh(new THREE.TorusGeometry(3, 0.4, 8, 24), new THREE.MeshBasicMaterial({color: col, transparent: true, opacity: 0.8})));
+  g.visible = false;
+  scene.add(g);
+  return g;
+}
+
+function createRayLine(col) {
+  const mat = new THREE.LineBasicMaterial({color: col, transparent: true, opacity: 0.7, linewidth: 2});
+  const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+  const line = new THREE.Line(geo, mat);
+  line.visible = false;
+  scene.add(line);
+  return line;
+}
+
+/* ── ASTRONOMICAL MATH ── */
+function updateSun(t, declDeg) {
+  // Time: t=0 -> 6 AM, t=1 -> 6 PM. t=0.5 -> 12 Noon.
+  const hours = 6 + t * 12;
+  const ha = (hours - 12) * 15 * Math.PI/180; // Hour angle
+  const d = declDeg * Math.PI/180;            // Declination
+
+  // Exact Spherical Trigonometry for Altitude
+  const sinAlt = Math.sin(LAT)*Math.sin(d) + Math.cos(LAT)*Math.cos(d)*Math.cos(ha);
+  const alt = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
+  const altDeg = alt * 180/Math.PI;
+
+  // Exact Spherical Trigonometry for Azimuth (from North)
+  let azi = 0;
+  if (Math.abs(Math.cos(alt)) > 0.001) {
+    const cosAzi = (Math.sin(d) - Math.sin(LAT)*sinAlt) / (Math.cos(LAT)*Math.cos(alt));
+    azi = Math.acos(Math.max(-1, Math.min(1, cosAzi)));
+    if (ha > 0) azi = 2*Math.PI - azi; // Afternoon
+  }
+  const aziDeg = azi * 180/Math.PI;
+  const isDay = alt > 0;
+
+  // Setup Visual Sun Position (N=-Z, E=+X, S=+Z, W=-X)
+  const dist = 600;
+  const sx = Math.sin(azi) * Math.cos(alt) * dist;
+  const sy = Math.sin(alt) * dist;
+  const sz = -Math.cos(azi) * Math.cos(alt) * dist;
+  
+  sunLight.position.set(sx, sy, sz);
+  sunMesh.position.set(sx, sy, sz);
+  sunMesh.visible = isDay;
+
+  // Environment Lighting adjustments based on altitude
+  const intensity = Math.max(0, Math.sin(alt));
+  const warm = Math.max(0, 1 - intensity*3);
+  scene.background.setRGB(isDay ? 0.08+intensity*0.1+warm*0.1 : 0.05, isDay ? 0.12+intensity*0.2 : 0.07, isDay ? 0.20+intensity*0.3-warm*0.1 : 0.10);
+  scene.fog.color.copy(scene.background);
+  sunLight.intensity = isDay ? 0.5 + intensity * 2.5 : 0;
+  hemi.intensity = isDay ? 0.2 + intensity * 0.4 : 0.05;
+
+  // SHADOW CALCULATION
+  const shadowAzi = azi + Math.PI; // Shadow casts away from sun
+  let dx = 0, dy = Y_FLOOR, dz = 0;
+  let isOnFloor = true;
+
+  if (isDay) {
+    const d_h = H / Math.tan(alt); // Horizontal distance of shadow from center
+    
+    if (d_h <= R) {
+      // Shadow hits the floor
+      dx = Math.sin(shadowAzi) * d_h;
+      dz = -Math.cos(shadowAzi) * d_h;
+      dy = Y_FLOOR;
+    } else {
+      // Shadow hits the wall
+      isOnFloor = false;
+      dx = Math.sin(shadowAzi) * R;
+      dz = -Math.cos(shadowAzi) * R;
+      const d_v = R * Math.tan(alt); // Vertical drop from top
+      dy = Y_TOP - d_v; 
+    }
+  }
+
+  // Determine Active Cylinder based on shadow azimuth
+  // Sectors are 30° wide.
+  const shadowAziDeg = (shadowAzi * 180/Math.PI) % 360;
+  const sectorIdx = Math.floor(shadowAziDeg / (360/NSECTORS));
+  const activeA = (sectorIdx % 2 === 0);
+
+  // Update Visuals
+  if (isDay && altDeg > 1) { // Hide ray right at horizon to avoid artifacts
+    if (activeA) {
+      shadowDotA.position.set(CX_A + dx, dy, dz); shadowDotA.visible = true;
+      rayA.geometry.setFromPoints([new THREE.Vector3(CX_A, Y_TOP, 0), new THREE.Vector3(CX_A + dx, dy, dz)]); rayA.visible = true;
+      shadowDotB.visible = false; rayB.visible = false;
+    } else {
+      shadowDotB.position.set(CX_B + dx, dy, dz); shadowDotB.visible = true;
+      rayB.geometry.setFromPoints([new THREE.Vector3(CX_B, Y_TOP, 0), new THREE.Vector3(CX_B + dx, dy, dz)]); rayB.visible = true;
+      shadowDotA.visible = false; rayA.visible = false;
+    }
+  } else {
+    shadowDotA.visible = rayA.visible = shadowDotB.visible = rayB.visible = false;
+  }
+
+  // UI Updates
+  document.getElementById('va').textContent = isDay ? altDeg.toFixed(1) + '°' : '—';
+  document.getElementById('vz').textContent = isDay ? aziDeg.toFixed(1) + '°' : '—';
+  document.getElementById('vz2').textContent = isDay ? (90 - altDeg).toFixed(1) + '°' : '—';
+  
+  const vact = document.getElementById('vact');
+  vact.textContent = !isDay ? '—' : activeA ? 'CYLINDER A' : 'CYLINDER B';
+  vact.style.color = !isDay ? '#888' : activeA ? '#ffb347' : '#68d4f4';
+
+  const h = Math.floor(hours), m = Math.floor((hours%1)*60), ap = h>=12 ? 'PM' : 'AM', dh = h%12 || 12;
+  document.getElementById('clk').textContent = `${dh}:${m.toString().padStart(2,'0')} ${ap}`;
+  document.getElementById('note').textContent = !isDay ? 'Night — Sun below horizon' : isOnFloor ? 'Shadow resting on Floor scale' : 'Shadow resting on Wall scale';
+}
+
+/* ── INTERACTION & LOOP ── */
+function onMove(e) {
+  if (!mouse.down) return;
+  const dx = e.clientX - mouse.px, dy = e.clientY - mouse.py;
+  if (e.buttons === 2 || mouse.btn === 2) { cam.tx -= dx*0.1; cam.tz -= dy*0.1; }
+  else { cam.theta -= dx*0.005; cam.phi = Math.max(0.1, Math.min(Math.PI*0.48, cam.phi + dy*0.005)); }
+  mouse.px = e.clientX; mouse.py = e.clientY;
+}
+
+function setV(i) { Object.assign(cam, VIEWS[i]); }
+
+function toggleAnim() {
+  anim = !anim;
+  if(anim) liveMode = false;
+  syncButtons();
+}
+
+function toggleLive() {
+  liveMode = !liveMode;
+  if(liveMode) anim = false;
+  syncButtons();
+}
+
+function syncButtons() {
+  document.getElementById('ab').textContent = anim ? '⏸ PAUSE' : '▶ PLAY';
+  document.getElementById('ab').className = anim ? 'active-btn' : '';
+  document.getElementById('liveBtn').className = liveMode ? 'active-btn' : '';
+}
+
+function loop() {
+  requestAnimationFrame(loop);
+  
+  if (liveMode) {
+    const now = new Date();
+    // Calculate time of day as 0..1 from 6AM to 6PM
+    let h = now.getHours() + now.getMinutes()/60 + now.getSeconds()/3600;
+    let t = (h - 6) / 12;
+    t = Math.max(0, Math.min(1, t)); // clamp to slider bounds visually
+    
+    // Approximate declination based on day of year
+    const start = new Date(now.getFullYear(), 0, 0);
+    const dayOfYear = Math.floor((now - start) / 86400000);
+    const decl = -23.44 * Math.cos((360/365 * (dayOfYear + 10)) * Math.PI/180);
+    
+    document.getElementById('tsl').value = t;
+    document.getElementById('dsl').value = decl;
+    updateSun(t, decl);
+  } else if (anim) {
+    animT = (animT + 0.0003) % 1;
+    document.getElementById('tsl').value = animT;
+    updateSun(animT, +document.getElementById('dsl').value);
+  }
+
+  // Camera damping
+  camera.position.set(
+    cam.tx + cam.r * Math.sin(cam.phi) * Math.cos(cam.theta),
+    cam.ty + cam.r * Math.cos(cam.phi),
+    cam.tz + cam.r * Math.sin(cam.phi) * Math.sin(cam.theta)
+  );
+  camera.lookAt(cam.tx, cam.ty, cam.tz);
+  
+  // Pulse animation on shadow dot
+  const pulse = 1 + 0.2 * Math.sin(Date.now() * 0.005);
+  if(shadowDotA.visible) shadowDotA.children[1].scale.setScalar(pulse);
+  if(shadowDotB.visible) shadowDotB.children[1].scale.setScalar(pulse);
+
+  renderer.render(scene, camera);
+}
+
+function onResize() {
+  const c = document.getElementById('c');
+  const W = c.clientWidth, H2 = c.clientHeight;
+  renderer.setSize(W, H2, false);
+  camera.aspect = W/H2;
+  camera.updateProjectionMatrix();
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>

@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jai Prakash Yantra Real-Time Simulator</title>
+<style>
+  :root {
+    --bg-panel: rgba(15, 23, 42, 0.75);
+    --border-panel: rgba(245, 158, 11, 0.2);
+    --text-main: #f8fafc;
+    --text-dim: #94a3b8;
+    --accent: #f59e0b;
+    --accent-hover: #fbbf24;
+    --font-heading: 'Georgia', serif;
+    --font-ui: system-ui, -apple-system, sans-serif;
+  }
+  
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: #020617;
+    font-family: var(--font-ui);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .glass-panel {
+    background: var(--bg-panel);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-panel);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    z-index: 10;
+  }
+
+  /* Top Left: Header */
+  .header {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    padding: 16px 24px;
+    pointer-events: none;
+  }
+  .title {
+    font-family: var(--font-heading);
+    font-size: 22px;
+    font-weight: bold;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  /* Top Right: Dashboard */
+  .dashboard {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    padding: 16px;
+    min-width: 260px;
+  }
+  .clock {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-main);
+    text-align: center;
+    margin-bottom: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .date-display {
+    font-size: 11px;
+    color: var(--accent);
+    text-align: center;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+  
+  .data-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .data-box {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    padding: 6px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .data-box.col-span-2 {
+    grid-column: span 2;
+  }
+  .data-label {
+    font-size: 8.5px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    margin-bottom: 3px;
+    text-transform: uppercase;
+  }
+  .data-val {
+    font-size: 13px;
+    color: var(--text-main);
+    font-weight: 600;
+    font-family: var(--font-heading);
+  }
+  .data-val.highlight {
+    color: var(--accent);
+  }
+
+  .status-note {
+    font-size: 11px;
+    color: var(--text-dim);
+    text-align: center;
+    line-height: 1.5;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    padding-top: 10px;
+  }
+
+  /* Bottom: Controls */
+  .controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 16px 24px;
+    width: 90%;
+    max-width: 700px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .slider-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    width: 50px;
+    text-align: right;
+  }
+  input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+    transition: transform 0.1s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  button {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--text-main);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  button:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  button.active-mode {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Overlay Instruction */
+  #drag-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: rgba(255,255,255,0.3);
+    font-size: 14px;
+    pointer-events: none;
+    letter-spacing: 2px;
+    transition: opacity 1s;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+<div id="drag-hint">DRAG TO ROTATE CAMERA</div>
+
+<!-- Top Left: Info -->
+<div class="header glass-panel">
+  <div class="title">Jai Prakash Yantra</div>
+  <div class="subtitle">Jaipur Observatory · Real-Time Celestial Simulation</div>
+</div>
+
+<!-- Top Right: Live Data Dashboard -->
+<div class="dashboard glass-panel">
+  <div class="clock" id="ui-clock">--:--:--</div>
+  <div class="date-display" id="ui-date">Loading...</div>
+  
+  <div class="data-grid">
+    <div class="data-box">
+      <div class="data-label">Alt (Local)</div>
+      <div class="data-val" id="ui-alt">--°</div>
+    </div>
+    <div class="data-box">
+      <div class="data-label">Az (Local)</div>
+      <div class="data-val" id="ui-az">--°</div>
+    </div>
+    <div class="data-box">
+      <div class="data-label">RA (Where it is)</div>
+      <div class="data-val" id="ui-ra">--</div>
+    </div>
+    <div class="data-box">
+      <div class="data-label">Dec (Where it is)</div>
+      <div class="data-val" id="ui-dec">--°</div>
+    </div>
+    <div class="data-box">
+      <div class="data-label">LST (Star Time)</div>
+      <div class="data-val" id="ui-lst">--</div>
+    </div>
+    <div class="data-box">
+      <div class="data-label">HA (Sky Orient)</div>
+      <div class="data-val" id="ui-ha">--°</div>
+    </div>
+    <div class="data-box col-span-2">
+      <div class="data-label">Active Bowl</div>
+      <div class="data-val highlight" id="ui-bowl">--</div>
+    </div>
+  </div>
+  
+  <div class="status-note" id="ui-note">
+    Calculating celestial position...
+  </div>
+</div>
+
+<!-- Bottom: Controls -->
+<div class="controls glass-panel">
+  <div class="slider-row">
+    <div class="slider-label">TIME</div>
+    <input type="range" id="time-slider" min="0" max="24" step="0.05" value="12">
+    <div class="slider-label" style="text-align:left;" id="time-val">12:00</div>
+  </div>
+  <div class="slider-row">
+    <div class="slider-label">DATE</div>
+    <input type="range" id="date-slider" min="0" max="365" step="1" value="80">
+    <div class="slider-label" style="text-align:left;" id="date-val">Mar 21</div>
+  </div>
+  
+  <div class="btn-row">
+    <button id="btn-live" class="active-mode" onclick="setLiveMode(true)">🔴 LIVE TIME</button>
+    <button id="btn-anim" onclick="toggleAnim()">▶ PLAY DAY</button>
+    <span style="width: 12px;"></span>
+    <button onclick="setCamera(0)">AERIAL</button>
+    <button onclick="setCamera(1)">BOWL A</button>
+    <button onclick="setCamera(2)">BOWL B</button>
+    <button onclick="setCamera(3)">INSIDE VIEW</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   JAI PRAKASH YANTRA — REAL-TIME ASTRONOMICAL SIMULATOR
+   Location: Jaipur, India (Lat: 26.9239° N, Lon: 75.8267° E)
+   Coordinates dynamically calculated based on actual Julian Date.
+═══════════════════════════════════════════════════════════════════ */
+
+// -- ASTRONOMICAL CONSTANTS (Jaipur) --
+const LATITUDE = 26.9239;
+const LONGITUDE = 75.8267;
+const LAT_RAD = LATITUDE * Math.PI / 180;
+
+// -- 3D MODEL CONSTANTS --
+const BOWL_R  = 28;   // internal radius
+const NSECTORS = 12;  // 15° sectors
+const WALL_H   = 6;   // rim wall height
+const BASE_Y   = 1;   
+const BOWL_CX_A = -35, BOWL_CX_B = 35; 
+
+// -- GLOBALS --
+let scene, camera, renderer, sunLight, hemi, sunMesh;
+let shadowDotA, shadowDotB;
+let pulse = 0;
+
+// Application State
+let isLive = true;
+let isAnimating = false;
+let simDate = new Date(); 
+
+// Cameras
+const CAM_VIEWS = [
+  { theta: Math.PI/4, phi: Math.PI/3.5, r: 160, tx: 0, ty: 5, tz: 0 },         // Aerial
+  { theta: 0, phi: Math.PI/3, r: 80, tx: BOWL_CX_A, ty: -5, tz: 0 }, // Bowl A
+  { theta: 0, phi: Math.PI/3, r: 80, tx: BOWL_CX_B, ty: -5, tz: 0 }, // Bowl B
+  { theta: 0, phi: Math.PI/1.8, r: 20, tx: BOWL_CX_A, ty: -10, tz: 0 }   // Inside
+];
+let camTarget = { ...CAM_VIEWS[0] };
+let currentCam = { ...CAM_VIEWS[0] };
+let mouse = { down: false, px: 0, py: 0 };
+let materials = {};
+
+/* ════════════════════════════════════
+   ASTRONOMY MATH ENGINE
+════════════════════════════════════ */
+// Helper to format decimal hours into HHh MMm SSs
+function formatHours(decimalHours) {
+    if (decimalHours < 0) decimalHours += 24;
+    const h = Math.floor(decimalHours);
+    const m = Math.floor((decimalHours - h) * 60);
+    const s = Math.floor(((decimalHours - h) * 60 - m) * 60);
+    return `${h.toString().padStart(2, '0')}h ${m.toString().padStart(2, '0')}m`;
+}
+
+function calculateSunPosition(date) {
+    const rad = Math.PI / 180;
+    const JD = (date.getTime() / 86400000.0) + 2440587.5;
+    const n = JD - 2451545.0;
+
+    let L = (280.460 + 0.9856474 * n) % 360;
+    if (L < 0) L += 360;
+    let g = (357.528 + 0.9856003 * n) % 360;
+    if (g < 0) g += 360;
+
+    const lambda = L + 1.915 * Math.sin(g * rad) + 0.02 * Math.sin(2 * g * rad);
+    const epsilon = 23.439 - 0.0000004 * n;
+
+    const sin_lambda = Math.sin(lambda * rad);
+    const cos_lambda = Math.cos(lambda * rad);
+    const sin_epsilon = Math.sin(epsilon * rad);
+    const cos_epsilon = Math.cos(epsilon * rad);
+
+    // 1. Where a star/planet is: Right Ascension & Declination
+    const sin_dec = sin_epsilon * sin_lambda;
+    const decRad = Math.asin(sin_dec);
+    const dec = decRad / rad;
+
+    let raRad = Math.atan2(cos_epsilon * sin_lambda, cos_lambda);
+    if (raRad < 0) raRad += 2 * Math.PI;
+    const raHours = raRad * 12 / Math.PI; // Convert to hours
+
+    // 2. What time it is: Local Sidereal Time (LST)
+    let GMST = 18.697374558 + 24.06570982441908 * n;
+    GMST = GMST % 24;
+    if (GMST < 0) GMST += 24;
+
+    let LST = GMST + (LONGITUDE / 15.0);
+    LST = LST % 24;
+    if (LST < 0) LST += 24;
+
+    // 3. How the sky is oriented: Hour Angle (Bridge between Celestial and Local)
+    // Formula: Hour Angle = Local Sidereal Time - Right Ascension
+    let haRad = (LST * 15 * rad) - raRad;
+    const haDegrees = haRad / rad; 
+    
+    // Altitude and Azimuth (Local coordinates)
+    const sin_alt = Math.sin(LAT_RAD) * Math.sin(decRad) + Math.cos(LAT_RAD) * Math.cos(decRad) * Math.cos(haRad);
+    const altRad = Math.asin(sin_alt);
+    const alt = altRad / rad;
+
+    let cos_az = (Math.sin(decRad) - Math.sin(LAT_RAD) * Math.sin(altRad)) / (Math.cos(LAT_RAD) * Math.cos(altRad));
+    cos_az = Math.max(-1, Math.min(1, cos_az)); 
+    let azRad = Math.acos(cos_az);
+    
+    if (Math.sin(haRad) > 0) azRad = 2 * Math.PI - azRad;
+    const az = azRad / rad;
+
+    return { 
+      altitude: alt, 
+      azimuth: az, 
+      declination: dec, 
+      rightAscension: raHours,
+      lst: LST,
+      hourAngle: haDegrees,
+      isDay: alt > 0 
+    };
+}
+
+/* ════════════════════════════════════
+   3D MATERIALS & TEXTURES
+════════════════════════════════════ */
+function initMaterials() {
+  materials.marble  = new THREE.MeshStandardMaterial({color:0xfff6e5, roughness:0.4, metalness:0.05});
+  materials.scale   = new THREE.MeshStandardMaterial({color:0xffffff, roughness:0.8, side: THREE.DoubleSide, alphaTest: 0.5});
+  materials.ground  = new THREE.MeshStandardMaterial({color:0x202421, roughness:0.9}); // Dark earth
+  materials.pit     = new THREE.MeshStandardMaterial({color:0x05080f, roughness:1.0}); 
+}
+
+function createBowlTexture(isBowlA) {
+  const W = 2048, H = 512, cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const c = cv.getContext('2d');
+
+  // Transparent background
+  c.clearRect(0,0,W,H);
+
+  const sectorW = W / 12;
+  for(let s=0; s<12; s++) {
+    const isSolid = isBowlA ? (s%2 === 0) : (s%2 !== 0);
+    if (isSolid) {
+      c.fillStyle = '#ebdcca'; 
+      c.fillRect(s * sectorW, 0, sectorW, H);
+    }
+  }
+
+  c.globalCompositeOperation = 'source-atop';
+
+  // Horizontal Altitude Lines
+  for(let alt=10; alt<=90; alt+=10) {
+    let y = (alt/90) * H;
+    c.beginPath(); c.moveTo(0, y); c.lineTo(W, y);
+    c.strokeStyle = alt%30===0 ? '#451a03' : 'rgba(69, 26, 3, 0.4)';
+    c.lineWidth = alt%30===0 ? 4 : 2;
+    c.stroke();
+    
+    if(alt%30===0 && alt < 90) {
+        c.font = 'bold 24px Georgia'; c.fillStyle = '#451a03';
+        c.fillText(alt+'°', 20, y - 5);
+        c.fillText(alt+'°', W/2 + 20, y - 5);
+    }
+  }
+
+  // Vertical Azimuth Lines
+  for(let az=0; az<=360; az+=15) {
+    let x = (az/360) * W;
+    c.beginPath(); c.moveTo(x, 0); c.lineTo(x, H);
+    c.strokeStyle = az%90===0 ? '#451a03' : 'rgba(69, 26, 3, 0.4)';
+    c.lineWidth = az%90===0 ? 4 : 2;
+    c.stroke();
+  }
+
+  for(let s=0; s<=12; s++) {
+    let x = s * sectorW;
+    c.beginPath(); c.moveTo(x, 0); c.lineTo(x, H);
+    c.strokeStyle = '#d97706'; c.lineWidth = 6; c.stroke();
+  }
+
+  const tex = new THREE.CanvasTexture(cv);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.repeat.x = -1; 
+  return tex;
+}
+
+/* ════════════════════════════════════
+   SCENE CONSTRUCTION
+════════════════════════════════════ */
+function buildHemisphere(cx, cy, cz, isBowlA, texBowl) {
+  const group = new THREE.Group();
+  group.position.set(cx, cy, cz);
+
+  const pit = new THREE.Mesh(new THREE.CylinderGeometry(BOWL_R+1, BOWL_R-2, BOWL_R, 64, 1, true), materials.pit);
+  pit.position.y = -BOWL_R/2;
+  group.add(pit);
+
+  const rim = new THREE.Mesh(new THREE.CylinderGeometry(BOWL_R+2, BOWL_R+3, WALL_H, 64, 1, true), materials.marble);
+  rim.position.y = WALL_H/2;
+  rim.castShadow = true; rim.receiveShadow = true;
+  group.add(rim);
+
+  const cap = new THREE.Mesh(new THREE.TorusGeometry(BOWL_R+1, 1, 16, 64), materials.marble);
+  cap.rotation.x = Math.PI/2; cap.position.y = WALL_H;
+  cap.receiveShadow = true; group.add(cap);
+
+  const bowlMat = materials.scale.clone();
+  bowlMat.map = texBowl;
+  const bowlGeo = new THREE.SphereGeometry(BOWL_R, 64, 32, 0, Math.PI*2, Math.PI/2, Math.PI/2);
+  const bowl = new THREE.Mesh(bowlGeo, bowlMat);
+  bowl.rotation.y = Math.PI; 
+  bowl.receiveShadow = true;
+  bowl.castShadow = true;
+  group.add(bowl);
+
+  const wireMat = new THREE.MeshStandardMaterial({color: 0x111111, metalness: 0.6});
+  const wireNS = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, BOWL_R*2), wireMat);
+  wireNS.rotation.x = Math.PI/2;
+  group.add(wireNS);
+
+  const wireEW = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, BOWL_R*2), wireMat);
+  wireEW.rotation.z = Math.PI/2;
+  group.add(wireEW);
+
+  const ringMat = new THREE.MeshStandardMaterial({color: 0xd4af37, metalness: 0.8, roughness: 0.3});
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.2, 16, 32), ringMat);
+  ring.rotation.x = Math.PI/2;
+  ring.castShadow = true;
+  group.add(ring);
+
+  scene.add(group);
+}
+
+/* ════════════════════════════════════
+   MAIN INITIALIZATION
+════════════════════════════════════ */
+window.onload = function() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x020617);
+  scene.fog = new THREE.FogExp2(0x020617, 0.003);
+
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 1000);
+
+  renderer = new THREE.WebGLRenderer({canvas: document.getElementById('c'), antialias: true});
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  hemi = new THREE.HemisphereLight(0xffffff, 0x444455, 0.3);
+  scene.add(hemi);
+
+  sunLight = new THREE.DirectionalLight(0xffeedd, 2.0);
+  sunLight.castShadow = true;
+  sunLight.shadow.mapSize.width = 2048;
+  sunLight.shadow.mapSize.height = 2048;
+  const d = 60;
+  sunLight.shadow.camera.left = -d; sunLight.shadow.camera.right = d;
+  sunLight.shadow.camera.top = d; sunLight.shadow.camera.bottom = -d;
+  sunLight.shadow.camera.near = 10; sunLight.shadow.camera.far = 400;
+  sunLight.shadow.bias = -0.0005;
+  scene.add(sunLight);
+
+  sunMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(6, 32, 32), 
+    new THREE.MeshBasicMaterial({color: 0xfff5b6})
+  );
+  scene.add(sunMesh);
+
+  initMaterials();
+  const texA = createBowlTexture(true);
+  const texB = createBowlTexture(false);
+
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), materials.ground);
+  ground.rotation.x = -Math.PI/2;
+  ground.position.y = BASE_Y - 0.1;
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  buildHemisphere(BOWL_CX_A, BASE_Y, 0, true, texA);
+  buildHemisphere(BOWL_CX_B, BASE_Y, 0, false, texB);
+
+  const dotGeo = new THREE.SphereGeometry(0.6, 16, 16);
+  const dotMat = new THREE.MeshBasicMaterial({color: 0xff3b30, transparent: true, opacity: 0.9});
+  shadowDotA = new THREE.Mesh(dotGeo, dotMat);
+  shadowDotB = new THREE.Mesh(dotGeo, dotMat);
+  scene.add(shadowDotA);
+  scene.add(shadowDotB);
+
+  window.addEventListener('resize', onResize);
+  setupControls();
+
+  animate();
+};
+
+/* ════════════════════════════════════
+   INTERACTION & ANIMATION
+════════════════════════════════════ */
+function onResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function setupControls() {
+  const cvs = document.getElementById('c');
+  const hint = document.getElementById('drag-hint');
+
+  const startDrag = (x, y) => { mouse.down = true; mouse.px = x; mouse.py = y; hint.style.opacity = '0'; };
+  const moveDrag = (x, y) => {
+    if(!mouse.down) return;
+    const dx = x - mouse.px;
+    const dy = y - mouse.py;
+    mouse.px = x; mouse.py = y;
+    camTarget.theta -= dx * 0.005;
+    camTarget.phi -= dy * 0.005;
+    camTarget.phi = Math.max(0.01, Math.min(Math.PI/2 - 0.05, camTarget.phi));
+  };
+  const endDrag = () => { mouse.down = false; };
+
+  cvs.addEventListener('mousedown', e => startDrag(e.clientX, e.clientY));
+  window.addEventListener('mousemove', e => moveDrag(e.clientX, e.clientY));
+  window.addEventListener('mouseup', endDrag);
+
+  cvs.addEventListener('touchstart', e => startDrag(e.touches[0].clientX, e.touches[0].clientY));
+  window.addEventListener('touchmove', e => moveDrag(e.touches[0].clientX, e.touches[0].clientY));
+  window.addEventListener('touchend', endDrag);
+
+  document.getElementById('time-slider').addEventListener('input', e => {
+    setLiveMode(false);
+    let hrs = parseFloat(e.target.value);
+    simDate.setHours(Math.floor(hrs), (hrs%1)*60, 0);
+    updateUIFields();
+  });
+
+  document.getElementById('date-slider').addEventListener('input', e => {
+    setLiveMode(false);
+    let days = parseInt(e.target.value);
+    let start = new Date(simDate.getFullYear(), 0, 1);
+    simDate = new Date(start.getTime() + days * 86400000);
+    updateUIFields();
+  });
+}
+
+function setLiveMode(val) {
+  isLive = val;
+  isAnimating = false;
+  document.getElementById('btn-live').className = val ? 'active-mode' : '';
+  document.getElementById('btn-anim').className = '';
+  if(val) updateUIFields();
+}
+
+function toggleAnim() {
+  isLive = false;
+  isAnimating = !isAnimating;
+  document.getElementById('btn-live').className = '';
+  document.getElementById('btn-anim').className = isAnimating ? 'active-mode' : '';
+  document.getElementById('btn-anim').innerText = isAnimating ? '⏸ PAUSE' : '▶ PLAY DAY';
+}
+
+function setCamera(idx) {
+  camTarget = { ...CAM_VIEWS[idx] };
+}
+
+function updateUIFields() {
+  let hrs = simDate.getHours() + simDate.getMinutes()/60;
+  document.getElementById('time-slider').value = hrs;
+  
+  let start = new Date(simDate.getFullYear(), 0, 1);
+  let days = Math.floor((simDate - start) / 86400000);
+  document.getElementById('date-slider').value = days;
+
+  document.getElementById('time-val').innerText = simDate.toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12:false});
+  document.getElementById('date-val').innerText = simDate.toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  if(isLive) {
+    simDate = new Date();
+    updateUIFields();
+  } else if(isAnimating) {
+    simDate = new Date(simDate.getTime() + 120000); // 2 minutes per frame
+    updateUIFields();
+  }
+
+  const astro = calculateSunPosition(simDate);
+
+  // General UI Updates
+  document.getElementById('ui-clock').innerText = simDate.toLocaleTimeString('en-US', {hour12: false});
+  document.getElementById('ui-date').innerText = simDate.toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'});
+  
+  // Coordinate Displays
+  document.getElementById('ui-alt').innerText = astro.altitude.toFixed(2) + '°';
+  document.getElementById('ui-az').innerText = astro.azimuth.toFixed(2) + '°';
+  
+  // New Astronomical calculations requested
+  document.getElementById('ui-ra').innerText = formatHours(astro.rightAscension);
+  document.getElementById('ui-dec').innerText = astro.declination.toFixed(2) + '°';
+  document.getElementById('ui-lst').innerText = formatHours(astro.lst);
+  
+  // Clean up Hour Angle representation (-180 to 180 degrees)
+  let haDisplay = astro.hourAngle;
+  if(haDisplay > 180) haDisplay -= 360; 
+  document.getElementById('ui-ha').innerText = haDisplay.toFixed(2) + '°';
+
+  // Physics & Shadows
+  if(astro.altitude > 0) {
+    sunLight.intensity = 2.0;
+    hemi.intensity = 0.3;
+    document.getElementById('ui-note').innerText = "Sun is above horizon. Reading projected shadow.";
+
+    const radAlt = astro.altitude * Math.PI / 180;
+    const radAz = astro.azimuth * Math.PI / 180;
+    const dist = 250;
+
+    const sx = dist * Math.cos(radAlt) * Math.sin(radAz);
+    const sy = dist * Math.sin(radAlt);
+    const sz = -dist * Math.cos(radAlt) * Math.cos(radAz);
+    
+    sunLight.position.set(sx, sy, sz);
+    sunMesh.position.set(sx, sy, sz);
+
+    const shR = BOWL_R - 0.2; 
+    const shX = -shR * Math.cos(radAlt) * Math.sin(radAz);
+    const shY = -shR * Math.sin(radAlt); 
+    const shZ = shR * Math.cos(radAlt) * Math.cos(radAz);
+
+    const shadowAz = (astro.azimuth + 180) % 360;
+    const sector = Math.floor(shadowAz / 30);
+    const isBowlAActive = (sector % 2 === 0);
+    
+    document.getElementById('ui-bowl').innerText = isBowlAActive ? "BOWL A" : "BOWL B";
+
+    shadowDotA.position.set(BOWL_CX_A + shX, BASE_Y + shY, shZ);
+    shadowDotB.position.set(BOWL_CX_B + shX, BASE_Y + shY, shZ);
+    
+    shadowDotA.visible = isBowlAActive;
+    shadowDotB.visible = !isBowlAActive;
+
+    pulse += 0.08;
+    const s = 1 + 0.2 * Math.sin(pulse);
+    shadowDotA.scale.set(s, s, s);
+    shadowDotB.scale.set(s, s, s);
+
+  } else {
+    sunLight.intensity = 0;
+    hemi.intensity = 0.05;
+    document.getElementById('ui-note').innerText = "Night time. No shadows cast.";
+    document.getElementById('ui-bowl').innerText = "NONE";
+    shadowDotA.visible = false;
+    shadowDotB.visible = false;
+    sunMesh.position.set(0, -100, 0); 
+  }
+
+  currentCam.theta += (camTarget.theta - currentCam.theta) * 0.1;
+  currentCam.phi += (camTarget.phi - currentCam.phi) * 0.1;
+  currentCam.r += (camTarget.r - currentCam.r) * 0.1;
+  currentCam.tx += (camTarget.tx - currentCam.tx) * 0.1;
+  currentCam.ty += (camTarget.ty - currentCam.ty) * 0.1;
+  currentCam.tz += (camTarget.tz - currentCam.tz) * 0.1;
+
+  const cx = currentCam.tx + currentCam.r * Math.sin(currentCam.phi) * Math.sin(currentCam.theta);
+  const cy = currentCam.ty + currentCam.r * Math.cos(currentCam.phi);
+  const cz = currentCam.tz + currentCam.r * Math.sin(currentCam.phi) * Math.cos(currentCam.theta);
+
+  camera.position.set(cx, cy, cz);
+  camera.lookAt(currentCam.tx, currentCam.ty, currentCam.tz);
+
+  renderer.render(scene, camera);
+}
+</script>
+</body>
+</html>
