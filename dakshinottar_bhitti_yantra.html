@@ -18,9 +18,6 @@
         .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; margin-top: 8px; }
         .status-active { background-color: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #4ade80; }
         .status-inactive { background-color: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #f87171; }
-        .btn-camera { background: rgba(51, 65, 85, 0.8); border: 1px solid #475569; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; color: white; }
-        .btn-camera:hover { background: rgba(71, 85, 105, 1); border-color: #eab308; }
-        .btn-camera.active { background: #ca8a04; border-color: #fef08a; font-weight: bold; }
     </style>
     
     <script type="importmap">
@@ -42,7 +39,7 @@
             <div class="panel max-w-md">
                 <h1 class="text-2xl font-bold text-yellow-500 mb-2">Dakshinottar Bhitti Yantra</h1>
                 <p class="text-sm text-gray-300 mb-3">
-                    Meridian wall instrument. The virtual observer dynamically moves to read the active face depending on the time of day.
+                    A precise meridian wall instrument. Based on your reference images, the East face features the advanced dual-arc design for seasonal tracking, while the West face uses a single grand arc.
                 </p>
                 <div class="p-3 bg-slate-800 rounded-lg border border-slate-600 mb-3">
                     <div class="flex justify-between items-center">
@@ -52,21 +49,11 @@
                 </div>
                 
                 <!-- Dynamic Working Principle Panel -->
-                <div class="p-3 bg-indigo-900/50 rounded-lg border border-indigo-500/50 mb-3">
+                <div class="p-3 bg-indigo-900/50 rounded-lg border border-indigo-500/50">
                     <h3 class="text-yellow-400 font-semibold mb-1" id="active-face-title">Active Face: East (Morning)</h3>
                     <p class="text-xs text-indigo-100 leading-relaxed" id="active-face-desc">
-                        Observer is reading the morning altitudes on the East face's double arcs.
+                        Working Principle: From sunrise to solar noon, the Sun illuminates the East face. The shadow of the top horizontal gnomon (pin) falls on the graduated marble arc. Observers track this shadow to measure the Sun's altitude and zenith distance during the morning hours.
                     </p>
-                </div>
-
-                <!-- Camera Controls -->
-                <div>
-                    <h3 class="text-sm text-gray-400 mb-2">Camera View</h3>
-                    <div class="flex gap-2">
-                        <button id="cam-free" class="btn-camera active">Orbit View</button>
-                        <button id="cam-pov" class="btn-camera">Observer POV</button>
-                        <button id="cam-follow" class="btn-camera">Follow Observer</button>
-                    </div>
                 </div>
             </div>
 
@@ -114,50 +101,18 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        // --- 1. State Management ---
-        const State = {
-            hourAngle: 0,
-            targetHourAngle: 0, // Used for smooth snapping to noon
+        // --- Application State ---
+        const state = {
+            hourAngle: 0, // 0 is exactly solar noon
             declination: 23.5, 
             latitude: 27, 
             arcRadius: 12,
             isAnimating: false,
-            animationSpeed: 0.02,
-            activeCameraView: 'free', // 'free', 'pov', 'follow'
-            
-            // Observer Logic
-            observerActiveSide: 1, // 1 for East, -1 for West
-            observerPos: new THREE.Vector3(5, 0, 8),
-            observerTargetPos: new THREE.Vector3(5, 0, 8),
-            
-            // Camera Logic
-            camPos: new THREE.Vector3(20, 15, 18),
-            camTargetPos: new THREE.Vector3(0, 10, 0),
-            camLookAt: new THREE.Vector3(0, 10, 0),
-            camTargetLookAt: new THREE.Vector3(0, 10, 0)
+            animationSpeed: 0.02 
         };
 
-        // --- 2. Constants & Materials ---
-        const CONSTANTS = {
-            WALL_THICKNESS: 1.5,
-            WALL_HEIGHT: 16,
-            ARC_CENTER_Y: 15,
-            WALL_LENGTH: 42
-        };
-
-        const MATS = {
-            wall: new THREE.MeshStandardMaterial({ color: 0xe6c875, roughness: 0.8, metalness: 0.1 }),
-            stairs: new THREE.MeshStandardMaterial({ color: 0x8b3a3a, roughness: 0.9, metalness: 0.1 }),
-            scale: new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.4 }),
-            ticks: new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5 }),
-            ground: new THREE.MeshStandardMaterial({ color: 0x5a7044, roughness: 1.0 }),
-            highlight: new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0 }),
-            obsBody: new THREE.MeshStandardMaterial({ color: 0x8e44ad, roughness: 0.7 }), // Purple robe
-            obsSkin: new THREE.MeshStandardMaterial({ color: 0xd4a373, roughness: 0.4 })
-        };
-
-        // --- 3. DOM Elements ---
-        const UI = {
+        // --- DOM Elements ---
+        const ui = {
             timeSlider: document.getElementById('slider-time'),
             decSlider: document.getElementById('slider-dec'),
             latSlider: document.getElementById('slider-lat'),
@@ -170,22 +125,18 @@
             btnNoon: document.getElementById('btn-noon'),
             btnAnimate: document.getElementById('btn-animate'),
             faceTitle: document.getElementById('active-face-title'),
-            faceDesc: document.getElementById('active-face-desc'),
-            camBtns: {
-                free: document.getElementById('cam-free'),
-                pov: document.getElementById('cam-pov'),
-                follow: document.getElementById('cam-follow')
-            }
+            faceDesc: document.getElementById('active-face-desc')
         };
 
-        // --- 4. Scene Setup ---
+        // --- Three.js Setup ---
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB); 
         scene.fog = new THREE.FogExp2(0x87CEEB, 0.003);
 
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 500);
-        
+        camera.position.set(20, 15, 18); // Positioned to see the East face clearly
+
         const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -196,13 +147,16 @@
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
+        controls.target.set(0, 10, 0);
         controls.maxPolarAngle = Math.PI / 2 - 0.02;
 
-        // Lighting
+        // --- Lighting ---
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
         scene.add(ambientLight);
+
         const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4);
         scene.add(hemiLight);
+
         const sunLight = new THREE.DirectionalLight(0xfffaee, 3.0);
         sunLight.castShadow = true;
         sunLight.shadow.mapSize.width = 4096; 
@@ -210,475 +164,477 @@
         sunLight.shadow.camera.near = 10;
         sunLight.shadow.camera.far = 150;
         const d = 25;
-        sunLight.shadow.camera.left = -d; sunLight.shadow.camera.right = d;
-        sunLight.shadow.camera.top = d; sunLight.shadow.camera.bottom = -d;
-        sunLight.shadow.bias = -0.0005; // Reduced artifacting
+        sunLight.shadow.camera.left = -d;
+        sunLight.shadow.camera.right = d;
+        sunLight.shadow.camera.top = d;
+        sunLight.shadow.camera.bottom = -d;
+        sunLight.shadow.bias = -0.0001;
         scene.add(sunLight);
 
-        const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(1.5, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffffee }));
+        const sunGeometry = new THREE.SphereGeometry(1.5, 32, 32);
+        const sunMaterial = new THREE.MeshBasicMaterial({ color: 0xffffee });
+        const sunMesh = new THREE.Mesh(sunGeometry, sunMaterial);
         scene.add(sunMesh);
 
-        // --- 5. Builder Objects (Upgraded Functions) ---
-        const YantraBuilder = {
-            group: new THREE.Group(),
-            highlights: {},
-
-            init() {
-                this.group.rotation.y = 0.015; // Offset to force shadow rendering at noon
-                scene.add(this.group);
-                this.buildWall();
-                this.buildStairs();
-                this.buildEastFace();
-                this.buildWestFace();
-                this.setupHighlights();
-                this.buildEnvironment();
-            },
-
-            buildWall() {
-                const geom = new THREE.BoxGeometry(CONSTANTS.WALL_THICKNESS, CONSTANTS.WALL_HEIGHT, CONSTANTS.WALL_LENGTH);
-                const wall = new THREE.Mesh(geom, MATS.wall);
-                wall.position.set(0, CONSTANTS.WALL_HEIGHT / 2, 0);
-                wall.castShadow = true; wall.receiveShadow = true;
-                this.group.add(wall);
-            },
-
-            buildStairs() {
-                const stepWidth = CONSTANTS.WALL_THICKNESS + 0.6; 
-                const stepZLength = 1.5;
-                for (let side = -1; side <= 1; side += 2) { 
-                    for (let i = 0; i < 8; i++) {
-                        const stepH = CONSTANTS.WALL_HEIGHT - i * 1.5;
-                        if (stepH < 2) continue;
-                        const step = new THREE.Mesh(new THREE.BoxGeometry(stepWidth, stepH, stepZLength), MATS.stairs);
-                        const zPos = side * (CONSTANTS.WALL_LENGTH / 2 - i * stepZLength - stepZLength/2);
-                        step.position.set(0, stepH / 2, zPos);
-                        step.castShadow = true; step.receiveShadow = true;
-                        this.group.add(step);
-                    }
-                }
-            },
-
-            buildEastFace() {
-                const faceSide = 1;
-                const arcGroup = new THREE.Group();
-                const R_double = 15, D = 16; 
-                const center1Z = D / 2, center2Z = -D / 2;
-                
-                this.buildGnomonAt(faceSide, center1Z);
-                this.buildGnomonAt(faceSide, center2Z);
-
-                for (let degree = 0; degree <= 72; degree++) {
-                    const rad = degree * Math.PI / 180;
-                    this.createArcTick(arcGroup, faceSide, degree, rad, R_double, center1Z, -1, true); // Arc 1
-                    this.createArcTick(arcGroup, faceSide, degree, rad, R_double, center2Z, 1, true);  // Arc 2
-                }
-                this.group.add(arcGroup);
-            },
-
-            buildWestFace() {
-                const faceSide = -1;
-                const arcGroup = new THREE.Group();
-                
-                // Solid backing ring
-                const ring = new THREE.Mesh(new THREE.RingGeometry(State.arcRadius - 1.2, State.arcRadius, 128, 1, 0, Math.PI), MATS.scale);
-                ring.position.set(faceSide * (CONSTANTS.WALL_THICKNESS / 2 + 0.05), CONSTANTS.ARC_CENTER_Y, 0);
-                ring.rotation.y = -Math.PI / 2;
-                ring.receiveShadow = true;
-                arcGroup.add(ring);
-
-                this.buildGnomonAt(faceSide, 0);
-
-                for (let degree = 0; degree <= 180; degree++) {
-                    const rad = degree * Math.PI / 180;
-                    this.createArcTick(arcGroup, faceSide, degree, rad, State.arcRadius, 0, 1, false);
-                }
-                this.group.add(arcGroup);
-            },
-
-            createArcTick(group, faceSide, degree, rad, radius, zOffset, zDir, isDouble) {
-                const isMajor = degree % 10 === 0, isMedium = degree % 5 === 0 && !isMajor;
-                const len = isMajor ? 0.4 : (isMedium ? 0.25 : 0.15);
-                const thick = isMajor ? 0.06 : 0.03;
-                
-                const yPos = CONSTANTS.ARC_CENTER_Y - radius * (isDouble ? Math.cos(rad) : Math.sin(rad));
-                const zPos = zOffset + zDir * radius * (isDouble ? Math.sin(rad) : Math.cos(rad));
-                const xPos = faceSide * (CONSTANTS.WALL_THICKNESS / 2 + 0.08);
-
-                const tick = new THREE.Mesh(new THREE.BoxGeometry(0.04, len, thick), MATS.ticks);
-                tick.position.set(xPos, yPos, zPos);
-                tick.rotation.x = isDouble ? (zDir > 0 ? rad : -rad) : rad;
-                tick.receiveShadow = true;
-                group.add(tick);
-
-                // Add Backing Track for double arcs
-                if (isDouble && degree === 0 === false) { // crude way to just add track once per degree
-                    const track = new THREE.Mesh(new THREE.BoxGeometry(0.02, 1.2, 0.35), MATS.scale);
-                    track.position.set(faceSide * (CONSTANTS.WALL_THICKNESS / 2 + 0.05), yPos, zPos);
-                    track.rotation.x = tick.rotation.x;
-                    track.receiveShadow = true;
-                    group.add(track);
-                }
-
-                if (isMajor && (isDouble ? degree > 0 : true)) {
-                    const displayNum = isDouble ? degree : Math.abs(degree - 90);
-                    const sprite = this.createTextSprite(displayNum.toString());
-                    const textRad = radius - 1.2 + 0.3;
-                    
-                    const ty = CONSTANTS.ARC_CENTER_Y - textRad * (isDouble ? Math.cos(rad) : Math.sin(rad));
-                    const tz = zOffset + zDir * textRad * (isDouble ? Math.sin(rad) : Math.cos(rad));
-                    
-                    sprite.position.set(faceSide * (CONSTANTS.WALL_THICKNESS / 2 + 0.1), ty, tz);
-                    sprite.scale.set(1.5, 0.75, 1);
-                    group.add(sprite);
-                }
-            },
-
-            buildGnomonAt(faceSide, zPos) {
-                const len = 1.8;
-                const gnomon = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, len, 16), MATS.ticks);
-                gnomon.rotation.z = Math.PI / 2;
-                gnomon.position.set(faceSide * (CONSTANTS.WALL_THICKNESS/2 + len/2), CONSTANTS.ARC_CENTER_Y, zPos);
-                gnomon.castShadow = true;
-                this.group.add(gnomon);
-                
-                const peg = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 16), MATS.ticks);
-                peg.position.set(faceSide * (CONSTANTS.WALL_THICKNESS/2 + len), CONSTANTS.ARC_CENTER_Y, zPos);
-                peg.castShadow = true;
-                this.group.add(peg);
-            },
-
-            setupHighlights() {
-                const geom = new THREE.TorusGeometry(0.3, 0.08, 16, 32);
-                this.highlights.east1 = new THREE.Mesh(geom, MATS.highlight);
-                this.highlights.east2 = new THREE.Mesh(geom, MATS.highlight);
-                this.highlights.west = new THREE.Mesh(geom, MATS.highlight);
-                
-                [this.highlights.east1, this.highlights.east2, this.highlights.west].forEach(h => {
-                    h.rotation.y = Math.PI / 2;
-                    this.group.add(h);
-                });
-            },
-
-            buildEnvironment() {
-                const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), MATS.ground);
-                ground.rotation.x = -Math.PI / 2;
-                ground.receiveShadow = true;
-                scene.add(ground);
-                
-                const compassGroup = new THREE.Group();
-                [{d: 'N', x: 0, z: -20}, {d: 'S', x: 0, z: 20}, {d: 'E', x: 20, z: 0}, {d: 'W', x: -20, z: 0}].forEach(dir => {
-                    const sprite = this.createTextSprite(dir.d);
-                    sprite.position.set(dir.x, 0.5, dir.z);
-                    sprite.scale.set(4, 2, 1);
-                    compassGroup.add(sprite);
-                });
-                scene.add(compassGroup);
-            },
-
-            createTextSprite(message) {
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                canvas.width = 128; canvas.height = 64;
-                context.fillStyle = 'rgba(255, 255, 255, 0)';
-                context.fillRect(0, 0, canvas.width, canvas.height);
-                context.font = "Bold 36px Arial";
-                context.fillStyle = "rgba(0, 0, 0, 1.0)";
-                context.textAlign = "center";
-                context.textBaseline = "middle";
-                context.fillText(message, canvas.width / 2, canvas.height / 2);
-                return new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true }));
-            }
+        // --- Materials ---
+        const colors = {
+            wall: 0xe6c875,      // Mustard yellow matching the reference image plaster
+            stairs: 0x8b3a3a,    // Reddish brown matching the sandstone stairs
+            scale: 0xf5f5f5,     
+            scaleMarks: 0x111111,
+            gnomon: 0x222222,    
+            ground: 0x5a7044     
         };
 
-        // --- 6. Virtual Observer AI ---
-        const VirtualObserver = {
-            mesh: new THREE.Group(),
+        const matWall = new THREE.MeshStandardMaterial({ color: colors.wall, roughness: 0.8, metalness: 0.1 });
+        const matStairs = new THREE.MeshStandardMaterial({ color: colors.stairs, roughness: 0.9, metalness: 0.1 });
+        const matScale = new THREE.MeshStandardMaterial({ color: colors.scale, roughness: 0.4, metalness: 0.1 });
+        const matTicks = new THREE.MeshStandardMaterial({ color: colors.scaleMarks, roughness: 0.5 });
+        
+        // --- Geometry Construction ---
+        const yantraGroup = new THREE.Group();
+        
+        // **CRITICAL GRAPHICS FIX**: Rotate the entire instrument by a microscopic fraction of a degree.
+        // This ensures the DirectionalLight is never *perfectly* parallel to the wall face at exact noon,
+        // which forces the shadow map to render the line clearly down the wall.
+        yantraGroup.rotation.y = 0.015; 
+        scene.add(yantraGroup);
+
+        const WALL_THICKNESS = 1.5;
+        const WALL_HEIGHT = 16;
+        const ARC_CENTER_Y = 15;
+        const R = state.arcRadius;
+
+        // Visual Highlight Rings for Reading
+        const highlightGeom = new THREE.TorusGeometry(0.3, 0.08, 16, 32);
+        const highlightMat = new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0 });
+        const highlightEast1 = new THREE.Mesh(highlightGeom, highlightMat);
+        const highlightEast2 = new THREE.Mesh(highlightGeom, highlightMat);
+        const highlightWest = new THREE.Mesh(highlightGeom, highlightMat);
+        highlightEast1.rotation.y = Math.PI / 2;
+        highlightEast2.rotation.y = Math.PI / 2;
+        highlightWest.rotation.y = Math.PI / 2;
+        yantraGroup.add(highlightEast1);
+        yantraGroup.add(highlightEast2);
+        yantraGroup.add(highlightWest);
+
+        function buildYantra() {
+            const wallLength = 42; 
+            const wallGeom = new THREE.BoxGeometry(WALL_THICKNESS, WALL_HEIGHT, wallLength);
+            const wall = new THREE.Mesh(wallGeom, matWall);
+            wall.position.set(0, WALL_HEIGHT / 2, 0);
+            wall.castShadow = true;
+            wall.receiveShadow = true;
+            yantraGroup.add(wall);
+
+            buildStairs(wallLength);
+
+            // Build East Face with Intersecting Double Arcs (Image Reference Style)
+            buildDoubleScaleArcs(1);  
+            // Build West Face with Single Arc (Jaipur style)
+            buildScaleArc(-1); 
+            buildGnomon(-1);
+        }
+
+        function buildDoubleScaleArcs(faceSide) {
+            const arcGroup = new THREE.Group();
+            const trackWidth = 1.2;
+            const R_double = 15; 
+            const D = 16; 
+            const center1Z = D / 2;
+            const center2Z = -D / 2;
             
-            init() {
-                // Body
-                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.25, 1.5, 16), MATS.obsBody);
-                body.position.y = 0.75;
-                body.castShadow = true;
-                this.mesh.add(body);
+            buildGnomonAt(faceSide, center1Z);
+            buildGnomonAt(faceSide, center2Z);
+
+            const maxAngle = 72; 
+            
+            for (let degree = 0; degree <= maxAngle; degree++) {
+                const rad = degree * Math.PI / 180;
+                const isMajor = degree % 10 === 0;
+                const isMedium = degree % 5 === 0 && !isMajor;
+                let tickLength = isMajor ? 0.4 : (isMedium ? 0.25 : 0.15);
+                let tickThickness = isMajor ? 0.06 : 0.03;
+
+                // --- Arc 1 (Sweeping -Z) ---
+                let y1 = ARC_CENTER_Y - R_double * Math.cos(rad);
+                let z1 = center1Z - R_double * Math.sin(rad);
                 
-                // Head
-                const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 16), MATS.obsSkin);
-                head.position.y = 1.65;
-                head.castShadow = true;
-                this.mesh.add(head);
+                const trackGeom1 = new THREE.BoxGeometry(0.02, trackWidth, 0.35); 
+                const track1 = new THREE.Mesh(trackGeom1, matScale);
+                track1.position.set(faceSide * (WALL_THICKNESS / 2 + 0.05), y1, z1);
+                track1.rotation.x = -rad;
+                track1.receiveShadow = true;
+                arcGroup.add(track1);
 
-                // Hat/Turban
-                const hat = new THREE.Mesh(new THREE.TorusGeometry(0.23, 0.08, 16, 32), MATS.obsBody);
-                hat.position.y = 1.7;
-                hat.rotation.x = Math.PI / 2;
-                this.mesh.add(hat);
-
-                this.mesh.position.copy(State.observerPos);
-                scene.add(this.mesh);
-            },
-
-            updateLogic(hourAngle, zenithDistance) {
-                // Determine which side the observer should stand
-                const isMorning = hourAngle < 0;
-                State.observerActiveSide = isMorning ? 1 : -1;
+                const tick1 = new THREE.Mesh(new THREE.BoxGeometry(0.04, tickLength, tickThickness), matTicks);
+                tick1.position.set(faceSide * (WALL_THICKNESS / 2 + 0.08), y1, z1);
+                tick1.rotation.x = -rad;
+                tick1.receiveShadow = true;
+                arcGroup.add(tick1);
                 
-                // Calculate z position based on where the reading is happening
-                let targetZ = 0;
-                if (isMorning) {
-                    // Morning: Reading on East Face (Double arcs)
-                    const D = 16;
-                    targetZ = (State.declination >= 0 ? D/2 : -D/2); // Very simplified representation of which arc they look at
-                } else {
-                    // Afternoon: Reading on West Face (Single arc)
-                    const rad = zenithDistance * Math.PI / 180;
-                    targetZ = State.arcRadius * Math.cos(rad) * 0.5; // Walk roughly along the arc
+                // --- Arc 2 (Sweeping +Z) ---
+                let y2 = ARC_CENTER_Y - R_double * Math.cos(rad);
+                let z2 = center2Z + R_double * Math.sin(rad);
+                
+                const trackGeom2 = new THREE.BoxGeometry(0.02, trackWidth, 0.35);
+                const track2 = new THREE.Mesh(trackGeom2, matScale);
+                track2.position.set(faceSide * (WALL_THICKNESS / 2 + 0.05), y2, z2);
+                track2.rotation.x = rad;
+                track2.receiveShadow = true;
+                arcGroup.add(track2);
+
+                const tick2 = new THREE.Mesh(new THREE.BoxGeometry(0.04, tickLength, tickThickness), matTicks);
+                tick2.position.set(faceSide * (WALL_THICKNESS / 2 + 0.08), y2, z2);
+                tick2.rotation.x = rad;
+                tick2.receiveShadow = true;
+                arcGroup.add(tick2);
+                
+                if (isMajor && degree > 0) {
+                    const textRad = R_double - trackWidth + 0.3;
+                    const sprite1 = createTextSprite(degree.toString());
+                    sprite1.position.set(faceSide * (WALL_THICKNESS / 2 + 0.1), ARC_CENTER_Y - textRad * Math.cos(rad), center1Z - textRad * Math.sin(rad));
+                    sprite1.scale.set(1.5, 0.75, 1);
+                    arcGroup.add(sprite1);
+
+                    const sprite2 = createTextSprite(degree.toString());
+                    sprite2.position.set(faceSide * (WALL_THICKNESS / 2 + 0.1), ARC_CENTER_Y - textRad * Math.cos(rad), center2Z + textRad * Math.sin(rad));
+                    sprite2.scale.set(1.5, 0.75, 1);
+                    arcGroup.add(sprite2);
                 }
-
-                // Set target position for interpolation
-                State.observerTargetPos.set(
-                    State.observerActiveSide * 6, // Distance from wall
-                    0, 
-                    targetZ
-                );
-            },
-
-            animate(delta) {
-                // Smoothly walk to target
-                this.mesh.position.lerp(State.observerTargetPos, 0.05);
-                
-                // Always face the wall
-                const lookTarget = new THREE.Vector3(0, CONSTANTS.ARC_CENTER_Y - 5, this.mesh.position.z);
-                this.mesh.lookAt(lookTarget);
             }
-        };
+            yantraGroup.add(arcGroup);
+        }
 
-        // --- 7. Astronomical Math & Logic ---
-        const AstroMath = {
-            update() {
-                const latRad = State.latitude * Math.PI / 180;
-                const decRad = State.declination * Math.PI / 180;
-                const haRad = State.hourAngle * 15 * Math.PI / 180;
+        function buildGnomonAt(faceSide, zPos) {
+            const gnomonLength = 1.8;
+            const geom = new THREE.CylinderGeometry(0.06, 0.06, gnomonLength, 16);
+            const gnomon = new THREE.Mesh(geom, matTicks);
+            gnomon.rotation.z = Math.PI / 2;
+            gnomon.position.set(faceSide * (WALL_THICKNESS/2 + gnomonLength/2), ARC_CENTER_Y, zPos);
+            gnomon.castShadow = true;
+            yantraGroup.add(gnomon);
+            
+            const pegGeom = new THREE.SphereGeometry(0.12, 16, 16);
+            const peg = new THREE.Mesh(pegGeom, matTicks);
+            peg.position.set(faceSide * (WALL_THICKNESS/2 + gnomonLength), ARC_CENTER_Y, zPos);
+            peg.castShadow = true;
+            yantraGroup.add(peg);
+        }
 
-                const sinAlt = Math.sin(latRad) * Math.sin(decRad) + Math.cos(latRad) * Math.cos(decRad) * Math.cos(haRad);
-                const altRad = Math.asin(sinAlt);
-                const altitudeDeg = altRad * 180 / Math.PI;
-
-                const cosAz = (Math.sin(decRad) - sinAlt * Math.sin(latRad)) / (Math.cos(altRad) * Math.cos(latRad));
-                let azRad = Math.acos(Math.max(-1, Math.min(1, cosAz))); 
-                if (Math.sin(haRad) > 0) azRad = 2 * Math.PI - azRad;
-
-                const zenithDistance = 90 - altitudeDeg;
-                const isNoon = Math.abs(State.hourAngle) < 0.15;
-
-                this.updateUI(altitudeDeg, zenithDistance, isNoon);
-                this.update3DObjects(altRad, azRad, altitudeDeg, zenithDistance);
-                VirtualObserver.updateLogic(State.hourAngle, zenithDistance);
-            },
-
-            updateUI(altitudeDeg, zenithDistance, isNoon) {
-                UI.altitudeVal.innerText = Math.max(0, altitudeDeg).toFixed(1) + '°';
-                
-                if (State.hourAngle < -0.1) {
-                    UI.faceTitle.innerText = "Active Face: East (Morning)";
-                    UI.faceTitle.className = "text-yellow-400 font-semibold mb-1";
-                    UI.faceDesc.innerText = "Observer is tracking the sun's shadow on the intersecting double-arcs of the East Face.";
-                } else if (State.hourAngle > 0.1) {
-                    UI.faceTitle.innerText = "Active Face: West (Afternoon)";
-                    UI.faceTitle.className = "text-orange-400 font-semibold mb-1";
-                    UI.faceDesc.innerText = "Sun has crossed the meridian. Observer moves to the West Face to track the single grand arc.";
-                } else {
-                    UI.faceTitle.innerText = "Meridian Transit (Solar Noon)";
-                    UI.faceTitle.className = "text-green-400 font-semibold mb-1";
-                    UI.faceDesc.innerText = "Sun is exactly South. The shadow falls straight down the wall edge, marking maximum altitude.";
+        function buildStairs(totalLength) {
+            const stepWidth = WALL_THICKNESS + 0.6; 
+            const stepZLength = 1.5;
+            for (let side = -1; side <= 1; side += 2) { 
+                for (let i = 0; i < 8; i++) {
+                    const stepH = WALL_HEIGHT - i * 1.5;
+                    if (stepH < 2) continue;
+                    const stepGeom = new THREE.BoxGeometry(stepWidth, stepH, stepZLength);
+                    const step = new THREE.Mesh(stepGeom, matStairs);
+                    const zPos = side * (totalLength / 2 - i * stepZLength - stepZLength/2);
+                    step.position.set(0, stepH / 2, zPos);
+                    step.castShadow = true;
+                    step.receiveShadow = true;
+                    yantraGroup.add(step);
                 }
-
-                if (altitudeDeg > 0) {
-                    UI.zenithVal.innerText = zenithDistance.toFixed(1) + '°';
-                    if (isNoon) {
-                        UI.statusBadge.className = 'status-badge status-active';
-                        UI.statusBadge.innerText = 'Meridian Transit (Readable)';
-                        MATS.highlight.opacity = Math.min(1, MATS.highlight.opacity + 0.05);
-                    } else {
-                        UI.statusBadge.className = 'status-badge status-inactive';
-                        UI.statusBadge.innerText = 'Shadow Slanting (Wait for Noon)';
-                        MATS.highlight.opacity = Math.max(0, MATS.highlight.opacity - 0.05);
-                    }
-                } else {
-                    UI.zenithVal.innerText = 'Night';
-                    UI.statusBadge.className = 'status-badge status-inactive';
-                    UI.statusBadge.innerText = 'Sun Below Horizon';
-                    MATS.highlight.opacity = 0;
-                    UI.faceTitle.innerText = "Night Time";
-                    UI.faceTitle.className = "text-gray-400 font-semibold mb-1";
-                    UI.faceDesc.innerText = "Observer rests. The Yantra is inactive until sunrise.";
-                }
-            },
-
-            update3DObjects(altRad, azRad, altitudeDeg, zenithDistance) {
-                const zenithRad = zenithDistance * Math.PI / 180;
-                const shadowDirZ = Math.cos(azRad) < 0 ? -1 : 1; 
-                
-                // Highlights
-                const { east1, east2, west } = YantraBuilder.highlights;
-                
-                // West 
-                const hWestZ = shadowDirZ * State.arcRadius * Math.sin(zenithRad);
-                const hWestY = CONSTANTS.ARC_CENTER_Y - State.arcRadius * Math.cos(zenithRad);
-                west.position.set(-(CONSTANTS.WALL_THICKNESS / 2 + 0.1), hWestY, hWestZ);
-
-                // East 
-                const R_double = 15, D = 16;
-                const c1Z = D / 2, c2Z = -D / 2;
-                
-                east1.position.set(CONSTANTS.WALL_THICKNESS / 2 + 0.1, CONSTANTS.ARC_CENTER_Y - R_double * Math.cos(zenithRad), c1Z + shadowDirZ * R_double * Math.sin(zenithRad));
-                east2.position.set(CONSTANTS.WALL_THICKNESS / 2 + 0.1, CONSTANTS.ARC_CENTER_Y - R_double * Math.cos(zenithRad), c2Z + shadowDirZ * R_double * Math.sin(zenithRad));
-
-                const validEast1 = zenithDistance <= 72 && shadowDirZ === -1; 
-                const validEast2 = zenithDistance <= 72 && shadowDirZ === 1;  
-
-                east1.visible = (State.hourAngle <= 0) && validEast1;
-                east2.visible = (State.hourAngle <= 0) && validEast2;
-                west.visible = State.hourAngle > 0;
-
-                // Sun Light Position
-                const distance = 80; 
-                sunLight.position.set(
-                    distance * Math.cos(altRad) * Math.sin(azRad),
-                    distance * Math.sin(altRad),
-                    -distance * Math.cos(altRad) * Math.cos(azRad)
-                );
-                sunMesh.position.copy(sunLight.position);
-                
-                sunLight.intensity = altitudeDeg > 0 ? 3.0 : 0;
-                ambientLight.intensity = altitudeDeg > 0 ? 0.35 : 0.1;
-                scene.background.setHex(altitudeDeg > 0 ? 0x87CEEB : 0x0a1128);
             }
-        };
+        }
 
-        // --- 8. Initialization & Event Listeners ---
+        function buildScaleArc(faceSide) {
+            const arcGroup = new THREE.Group();
+            const trackWidth = 1.2;
+            const ringGeom = new THREE.RingGeometry(R - trackWidth, R, 128, 1, 0, Math.PI);
+            const ring = new THREE.Mesh(ringGeom, matScale);
+            ring.position.set(faceSide * (WALL_THICKNESS / 2 + 0.05), ARC_CENTER_Y, 0);
+            ring.rotation.y = faceSide === 1 ? Math.PI / 2 : -Math.PI / 2;
+            ring.receiveShadow = true;
+            arcGroup.add(ring);
+
+            for (let degree = 0; degree <= 180; degree++) {
+                const rad = degree * Math.PI / 180;
+                const isMajor = degree % 10 === 0;
+                const isMedium = degree % 5 === 0 && !isMajor;
+                
+                let tickLength = isMajor ? 0.4 : (isMedium ? 0.25 : 0.15);
+                let tickThickness = isMajor ? 0.06 : 0.03;
+
+                const tickGeom = new THREE.BoxGeometry(0.04, tickLength, tickThickness);
+                const tick = new THREE.Mesh(tickGeom, matTicks);
+                const tickRadius = R - 0.1; 
+                
+                const yPos = ARC_CENTER_Y - tickRadius * Math.sin(rad);
+                const zPos = tickRadius * Math.cos(rad);
+                const xPos = faceSide * (WALL_THICKNESS / 2 + 0.08);
+
+                tick.position.set(xPos, yPos, zPos);
+                tick.rotation.x = rad; 
+                tick.receiveShadow = true;
+                arcGroup.add(tick);
+
+                if (isMajor) {
+                    const reading = Math.abs(degree - 90);
+                    const sprite = createTextSprite(reading.toString());
+                    const textRadius = R - trackWidth + 0.3; 
+                    sprite.position.set(
+                        faceSide * (WALL_THICKNESS / 2 + 0.1),
+                        ARC_CENTER_Y - textRadius * Math.sin(rad),
+                        textRadius * Math.cos(rad)
+                    );
+                    sprite.scale.set(1.5, 0.75, 1);
+                    arcGroup.add(sprite);
+                }
+            }
+            yantraGroup.add(arcGroup);
+        }
+
+        function buildGnomon(faceSide) {
+            const gnomonLength = 1.8;
+            const geom = new THREE.CylinderGeometry(0.06, 0.06, gnomonLength, 16);
+            const gnomon = new THREE.Mesh(geom, matTicks);
+            gnomon.rotation.z = Math.PI / 2;
+            gnomon.position.set(faceSide * (WALL_THICKNESS/2 + gnomonLength/2), ARC_CENTER_Y, 0);
+            gnomon.castShadow = true;
+            yantraGroup.add(gnomon);
+            
+            // Add a small knob at the end for a distinct shadow head
+            const pegGeom = new THREE.SphereGeometry(0.12, 16, 16);
+            const peg = new THREE.Mesh(pegGeom, matTicks);
+            peg.position.set(faceSide * (WALL_THICKNESS/2 + gnomonLength), ARC_CENTER_Y, 0);
+            peg.castShadow = true;
+            yantraGroup.add(peg);
+        }
+
+        function createTextSprite(message) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 128; canvas.height = 64;
+            context.fillStyle = 'rgba(255, 255, 255, 0)';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.font = "Bold 36px Arial";
+            context.fillStyle = "rgba(0, 0, 0, 1.0)";
+            context.textAlign = "center";
+            context.textBaseline = "middle";
+            context.fillText(message, canvas.width / 2, canvas.height / 2);
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            return new THREE.Sprite(spriteMaterial);
+        }
+
+        function buildEnvironment() {
+            const groundGeom = new THREE.PlaneGeometry(200, 200);
+            const groundMat = new THREE.MeshStandardMaterial({ color: colors.ground, roughness: 1.0 });
+            const ground = new THREE.Mesh(groundGeom, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+            
+            const compassGroup = new THREE.Group();
+            const directions = [
+                { dir: 'N', x: 0, z: -20 }, { dir: 'S', x: 0, z: 20 },
+                { dir: 'E', x: 20, z: 0 }, { dir: 'W', x: -20, z: 0 }
+            ];
+            directions.forEach(d => {
+                const sprite = createTextSprite(d.dir);
+                sprite.position.set(d.x, 0.5, d.z);
+                sprite.scale.set(4, 2, 1);
+                compassGroup.add(sprite);
+            });
+            scene.add(compassGroup);
+        }
+
+        buildYantra();
+        buildEnvironment();
+
+        // --- Logic & Math ---
         function formatClockTime(ha) {
             let totalHours = 12 + ha;
             let h = Math.floor(totalHours);
             let m = Math.round((totalHours - h) * 60);
             if (m === 60) { h += 1; m = 0; }
             let ampm = h >= 12 && h < 24 ? 'PM' : 'AM';
-            let displayH = h % 12 || 12;
+            let displayH = h % 12;
+            if (displayH === 0) displayH = 12;
             return `${displayH}:${m.toString().padStart(2, '0')} ${ampm}`;
         }
 
-        function syncUItoState() {
-            UI.timeVal.innerText = formatClockTime(State.hourAngle);
-            UI.decVal.innerText = (State.declination > 0 ? '+' : '') + State.declination.toFixed(1) + '°';
-            UI.latVal.innerText = State.latitude.toFixed(1) + '° N';
-            AstroMath.update();
-        }
+        function updateSunPosition() {
+            const latRad = state.latitude * Math.PI / 180;
+            const decRad = state.declination * Math.PI / 180;
+            const haRad = state.hourAngle * 15 * Math.PI / 180;
 
-        function initControls() {
-            UI.timeSlider.addEventListener('input', (e) => { 
-                State.isAnimating = false; 
-                State.targetHourAngle = parseFloat(e.target.value);
-                State.hourAngle = State.targetHourAngle;
-                UI.btnAnimate.innerText = "Animate Day";
-                UI.btnAnimate.className = "flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-2 rounded transition-colors text-sm";
-                syncUItoState(); 
-            });
-            UI.decSlider.addEventListener('input', (e) => { State.declination = parseFloat(e.target.value); syncUItoState(); });
-            UI.latSlider.addEventListener('input', (e) => { State.latitude = parseFloat(e.target.value); syncUItoState(); });
+            const sinAlt = Math.sin(latRad) * Math.sin(decRad) + Math.cos(latRad) * Math.cos(decRad) * Math.cos(haRad);
+            const altRad = Math.asin(sinAlt);
+            const altitudeDeg = altRad * 180 / Math.PI;
 
-            UI.btnNoon.addEventListener('click', () => {
-                State.isAnimating = false;
-                State.targetHourAngle = 0; // The render loop will smoothly lerp to this
-            });
+            const cosAz = (Math.sin(decRad) - sinAlt * Math.sin(latRad)) / (Math.cos(altRad) * Math.cos(latRad));
+            let azRad = Math.acos(Math.max(-1, Math.min(1, cosAz))); 
+            
+            if (Math.sin(haRad) > 0) azRad = 2 * Math.PI - azRad;
 
-            UI.btnAnimate.addEventListener('click', () => {
-                State.isAnimating = !State.isAnimating;
-                UI.btnAnimate.innerText = State.isAnimating ? "Pause" : "Animate Day";
-                UI.btnAnimate.className = State.isAnimating 
-                    ? "flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-2 rounded transition-colors text-sm"
-                    : "flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-2 rounded transition-colors text-sm";
-                State.targetHourAngle = State.hourAngle; // Sync target to prevent snapping on resume
-            });
+            const zenithDistance = 90 - altitudeDeg;
+            const isNoon = Math.abs(state.hourAngle) < 0.15; // Within ~9 minutes of noon
 
-            // Camera Controls
-            const setCameraView = (view) => {
-                State.activeCameraView = view;
-                Object.values(UI.camBtns).forEach(btn => btn.classList.remove('active'));
-                UI.camBtns[view].classList.add('active');
-            };
-
-            UI.camBtns.free.addEventListener('click', () => setCameraView('free'));
-            UI.camBtns.pov.addEventListener('click', () => setCameraView('pov'));
-            UI.camBtns.follow.addEventListener('click', () => setCameraView('follow'));
-
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
-        }
-
-        // --- 9. Main Render Loop ---
-        function renderLoop() {
-            requestAnimationFrame(renderLoop);
-
-            // Handle Time Animation & Snapping
-            if (State.isAnimating) {
-                State.hourAngle += State.animationSpeed;
-                if (State.hourAngle > 6) State.hourAngle = -6; 
-                State.targetHourAngle = State.hourAngle;
-                UI.timeSlider.value = State.hourAngle;
-                syncUItoState();
-            } else if (Math.abs(State.hourAngle - State.targetHourAngle) > 0.001) {
-                // Smooth snap to target (e.g. Snap to Noon)
-                State.hourAngle += (State.targetHourAngle - State.hourAngle) * 0.1;
-                UI.timeSlider.value = State.hourAngle;
-                syncUItoState();
+            // Update UI Data
+            ui.altitudeVal.innerText = Math.max(0, altitudeDeg).toFixed(1) + '°';
+            
+            // Dynamic Information Panel Update
+            if (state.hourAngle < -0.1) {
+                ui.faceTitle.innerText = "Active Face: East (Morning)";
+                ui.faceTitle.className = "text-yellow-400 font-semibold mb-1";
+                ui.faceDesc.innerText = "Working Principle: As shown in your reference image, the East face features a dual-arc design with two gnomons. This allows measuring extreme solstice angles without an impractically large wall. Depending on the season (Sun north or south), the shadow aligns on the corresponding intersecting arc.";
+            } else if (state.hourAngle > 0.1) {
+                ui.faceTitle.innerText = "Active Face: West (Afternoon)";
+                ui.faceTitle.className = "text-orange-400 font-semibold mb-1";
+                ui.faceDesc.innerText = "Working Principle: After crossing the meridian at noon, the Sun illuminates the West face. Here we demonstrate the classic single-arc design allowing continuous tracking until sunset.";
+            } else {
+                ui.faceTitle.innerText = "Meridian Transit (Solar Noon)";
+                ui.faceTitle.className = "text-green-400 font-semibold mb-1";
+                ui.faceDesc.innerText = "Working Principle: The Sun is crossing the local meridian. The shadow aligns perfectly parallel to the north-south wall, falling precisely on the vertical scale edge to measure the maximum daily altitude and meridian zenith distance.";
             }
 
-            // Update Observer
-            VirtualObserver.animate();
-
-            // Camera View Logic
-            if (State.activeCameraView === 'free') {
-                controls.enabled = true;
-                State.camTargetPos.copy(camera.position); // Sync for smooth transitions out of free view
-                State.camTargetLookAt.copy(controls.target);
-            } else {
-                controls.enabled = false;
-                
-                const obsPos = VirtualObserver.mesh.position;
-                
-                if (State.activeCameraView === 'pov') {
-                    // First Person View (slightly ahead of observer face)
-                    const sideMultiplier = State.observerActiveSide;
-                    State.camTargetPos.set(obsPos.x - sideMultiplier * 0.2, obsPos.y + 1.6, obsPos.z);
-                    State.camTargetLookAt.set(0, CONSTANTS.ARC_CENTER_Y - 5, obsPos.z);
-                } else if (State.activeCameraView === 'follow') {
-                    // Over the shoulder third person
-                    const sideMultiplier = State.observerActiveSide;
-                    State.camTargetPos.set(obsPos.x + sideMultiplier * 6, obsPos.y + 4, obsPos.z + 4);
-                    State.camTargetLookAt.copy(obsPos).add(new THREE.Vector3(0, 1.5, 0));
+            if (altitudeDeg > 0) {
+                ui.zenithVal.innerText = zenithDistance.toFixed(1) + '°';
+                if (isNoon) {
+                    ui.statusBadge.className = 'status-badge status-active';
+                    ui.statusBadge.innerText = 'Meridian Transit (Readable)';
+                    highlightMat.opacity = Math.min(1, highlightMat.opacity + 0.05); // Fade in
+                } else {
+                    ui.statusBadge.className = 'status-badge status-inactive';
+                    ui.statusBadge.innerText = 'Shadow Slanting (Wait for Noon)';
+                    highlightMat.opacity = Math.max(0, highlightMat.opacity - 0.05); // Fade out
                 }
+            } else {
+                ui.zenithVal.innerText = 'Night';
+                ui.statusBadge.className = 'status-badge status-inactive';
+                ui.statusBadge.innerText = 'Sun Below Horizon';
+                highlightMat.opacity = 0;
+                ui.faceTitle.innerText = "Night Time";
+                ui.faceDesc.innerText = "The Sun is currently below the horizon. The Yantra cannot cast shadows and is inactive.";
+                ui.faceTitle.className = "text-gray-400 font-semibold mb-1";
+            }
 
-                // Smooth camera interpolation
-                camera.position.lerp(State.camTargetPos, 0.05);
-                State.camLookAt.lerp(State.camTargetLookAt, 0.05);
-                camera.lookAt(State.camLookAt);
+            // Position Highlight Rings physically on the arc
+            const zenithRad = zenithDistance * Math.PI / 180;
+            const shadowDirZ = Math.cos(azRad) < 0 ? -1 : 1; 
+            
+            // West Face (Single Arc)
+            const hWestZ = shadowDirZ * R * Math.sin(zenithRad);
+            const hWestY = ARC_CENTER_Y - R * Math.cos(zenithRad);
+            highlightWest.position.set(-(WALL_THICKNESS / 2 + 0.1), hWestY, hWestZ);
+
+            // East Face (Double Intersecting Arcs)
+            const R_double = 15;
+            const D = 16;
+            const center1Z = D / 2;
+            const center2Z = -D / 2;
+            
+            // Highlight for Arc 1 (Center +Z)
+            const hEast1Y = ARC_CENTER_Y - R_double * Math.cos(zenithRad);
+            const hEast1Z = center1Z + shadowDirZ * R_double * Math.sin(zenithRad);
+            highlightEast1.position.set(WALL_THICKNESS / 2 + 0.1, hEast1Y, hEast1Z);
+            
+            // Highlight for Arc 2 (Center -Z)
+            const hEast2Y = ARC_CENTER_Y - R_double * Math.cos(zenithRad);
+            const hEast2Z = center2Z + shadowDirZ * R_double * Math.sin(zenithRad);
+            highlightEast2.position.set(WALL_THICKNESS / 2 + 0.1, hEast2Y, hEast2Z);
+
+            // Only show East highlights on the correct seasonal arc segment
+            const validEast1 = zenithDistance <= 72 && shadowDirZ === -1; 
+            const validEast2 = zenithDistance <= 72 && shadowDirZ === 1;  
+
+            highlightEast1.visible = (state.hourAngle <= 0) && validEast1;
+            highlightEast2.visible = (state.hourAngle <= 0) && validEast2;
+            highlightWest.visible = state.hourAngle > 0;
+
+            // 3D Sun Position
+            const distance = 80; 
+            const sunY = distance * Math.sin(altRad);
+            const horizontalDist = distance * Math.cos(altRad);
+            const sunX = horizontalDist * Math.sin(azRad);
+            const sunZ = -horizontalDist * Math.cos(azRad);
+
+            sunLight.position.set(sunX, sunY, sunZ);
+            sunMesh.position.copy(sunLight.position);
+            
+            sunLight.intensity = altitudeDeg > 0 ? 3.0 : 0;
+            ambientLight.intensity = altitudeDeg > 0 ? 0.35 : 0.1;
+            scene.background.setHex(altitudeDeg > 0 ? 0x87CEEB : 0x0a1128);
+        }
+
+        // --- Event Listeners ---
+        function updateFromUI() {
+            state.hourAngle = parseFloat(ui.timeSlider.value);
+            state.declination = parseFloat(ui.decSlider.value);
+            state.latitude = parseFloat(ui.latSlider.value);
+            
+            ui.timeVal.innerText = formatClockTime(state.hourAngle);
+            ui.decVal.innerText = (state.declination > 0 ? '+' : '') + state.declination.toFixed(1) + '°';
+            ui.latVal.innerText = state.latitude.toFixed(1) + '° N';
+            
+            updateSunPosition();
+        }
+
+        ui.timeSlider.addEventListener('input', () => { state.isAnimating = false; resetAnimateBtn(); updateFromUI(); });
+        ui.decSlider.addEventListener('input', updateFromUI);
+        ui.latSlider.addEventListener('input', updateFromUI);
+
+        ui.btnNoon.addEventListener('click', () => {
+            state.isAnimating = false;
+            resetAnimateBtn();
+            
+            // Smoothly animate the slider to 0 (Noon)
+            const snapAnim = setInterval(() => {
+                state.hourAngle *= 0.8; // Ease towards 0
+                if (Math.abs(state.hourAngle) < 0.01) {
+                    state.hourAngle = 0;
+                    clearInterval(snapAnim);
+                }
+                ui.timeSlider.value = state.hourAngle;
+                updateFromUI();
+            }, 16);
+        });
+
+        function resetAnimateBtn() {
+            ui.btnAnimate.innerText = "Animate Day";
+            ui.btnAnimate.className = "flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-2 rounded transition-colors text-sm";
+        }
+
+        ui.btnAnimate.addEventListener('click', () => {
+            state.isAnimating = !state.isAnimating;
+            if (state.isAnimating) {
+                ui.btnAnimate.innerText = "Pause";
+                ui.btnAnimate.className = "flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-2 rounded transition-colors text-sm";
+            } else {
+                resetAnimateBtn();
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        updateFromUI();
+
+        // --- Render Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (state.isAnimating) {
+                state.hourAngle += state.animationSpeed;
+                if (state.hourAngle > 6) state.hourAngle = -6; 
+                ui.timeSlider.value = state.hourAngle;
+                updateFromUI();
             }
 
             controls.update();
             renderer.render(scene, camera);
         }
-
-        // --- Execute ---
-        YantraBuilder.init();
-        VirtualObserver.init();
-        initControls();
-        syncUItoState();
         
-        // Wait for fonts to load before starting render
-        document.fonts.ready.then(() => { renderLoop(); });
+        document.fonts.ready.then(() => { animate(); });
 
     </script>
 </body>
 </html>
+
