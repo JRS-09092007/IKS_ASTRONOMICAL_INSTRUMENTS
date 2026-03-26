@@ -1,596 +1,728 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ram Yantra 3D</title>
-<style>
-  * { box-sizing: border-box; }
-  body { margin: 0; padding: 0; background: #0f141e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; overflow: hidden; }
-  
-  #container { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
-  canvas { width: 100%; height: 100%; display: block; outline: none; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ram Yantra 3D Simulator</title>
+    <!-- Three.js & Controls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
 
-  /* Premium Glassmorphism UI */
-  .panel {
-    position: absolute;
-    background: rgba(18, 24, 38, 0.75);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 215, 120, 0.15);
-    border-radius: 16px;
-    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
-    color: #f0f0f0;
-  }
+        body { margin: 0; overflow: hidden; background-color: #050505; color: #e5e7eb; font-family: 'Inter', sans-serif; }
+        canvas { display: block; width: 100vw; height: 100vh; z-index: 1; outline: none; }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        ::-webkit-scrollbar-thumb { background: #f97316; border-radius: 3px; }
 
-  /* Top Left Header */
-  .header { top: 20px; left: 20px; padding: 16px 24px; pointer-events: none; }
-  .title { font-family: "Georgia", serif; font-size: 24px; font-weight: bold; color: #f4d068; letter-spacing: 4px; margin-bottom: 6px; }
-  .subtitle { font-size: 11px; color: #a8b4c0; letter-spacing: 1.5px; text-transform: uppercase; }
+        .glass-panel { background: rgba(17, 24, 39, 0.85); backdrop-filter: blur(12px); border-left: 1px solid rgba(249, 115, 22, 0.2); }
+        .text-orange-accent { color: #f97316; }
+        .bg-orange-accent { background-color: #f97316; }
+        .tab-btn.active { border-bottom: 2px solid #f97316; color: #f97316; font-weight: 600; background: rgba(249, 115, 22, 0.1); }
+        
+        input[type=range] { -webkit-appearance: none; background: transparent; width: 100%; margin-top: 8px; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #f97316; cursor: pointer; margin-top: -6px; box-shadow: 0 0 10px rgba(249, 115, 22, 0.5); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #374151; border-radius: 2px; }
+        
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        
+        #loader { position: fixed; inset: 0; background: #000; z-index: 50; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.8s; }
+        .spinner { width: 50px; height: 50px; border: 3px solid rgba(249, 115, 22, 0.3); border-radius: 50%; border-top-color: #f97316; animation: spin 1s ease-in-out infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* Top Right Dashboard */
-  .dashboard { top: 20px; right: 20px; padding: 20px; width: 220px; }
-  .clock { font-family: "Georgia", serif; font-size: 32px; font-weight: bold; color: #f4d068; text-align: center; letter-spacing: 2px; margin-bottom: 4px; }
-  .status { font-size: 11px; color: #a8b4c0; text-align: center; margin-bottom: 16px; letter-spacing: 1px; }
-  
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
-  .data-box { background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 8px; text-align: center; }
-  .data-label { font-size: 9px; color: #8899a6; letter-spacing: 1px; margin-bottom: 4px; }
-  .data-value { font-family: "Georgia", serif; font-size: 16px; color: #f4d068; font-weight: bold; }
-  
-  .guide { font-size: 11px; color: #a8b4c0; text-align: center; line-height: 1.6; border-top: 1px solid rgba(255, 215, 120, 0.15); padding-top: 12px; }
-
-  /* Bottom Controls */
-  .controls { bottom: 20px; left: 50%; transform: translateX(-50%); padding: 20px 24px; width: 90%; max-width: 600px; display: flex; flex-direction: column; gap: 16px; }
-  
-  .slider-row { display: flex; gap: 12px; align-items: center; }
-  .slider-label { font-size: 11px; color: #a8b4c0; font-weight: 500; width: 50px; text-transform: uppercase; letter-spacing: 1px;}
-  
-  input[type="range"] {
-    flex: 1; -webkit-appearance: none; height: 4px; background: rgba(255, 215, 120, 0.2); border-radius: 2px; outline: none; cursor: pointer;
-  }
-  input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #f4d068; box-shadow: 0 0 10px rgba(244, 208, 104, 0.5); cursor: pointer; transition: transform 0.1s;
-  }
-  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
-
-  .btn-row { display: flex; gap: 8px; justify-content: space-between; flex-wrap: wrap; }
-  button {
-    flex: 1; min-width: 80px; padding: 10px 4px; font-size: 10px; font-weight: bold; cursor: pointer;
-    background: rgba(255, 215, 120, 0.1); border: 1px solid rgba(255, 215, 120, 0.2); border-radius: 8px;
-    color: #e0e6ed; letter-spacing: 1.5px; transition: all 0.2s;
-  }
-  button:hover { background: rgba(255, 215, 120, 0.2); color: #fff; }
-  button.active-btn { background: rgba(244, 208, 104, 0.25); border-color: #f4d068; color: #f4d068; }
-
-  .hint { text-align: center; font-size: 10px; color: #788896; letter-spacing: 1px; margin-top: 4px; }
-  
-  @media (max-width: 768px) {
-    .dashboard { top: auto; bottom: 200px; right: 50%; transform: translateX(50%); width: 90%; max-width: 320px; padding: 12px; }
-    .controls { bottom: 10px; padding: 12px; }
-    .grid { margin-bottom: 8px; }
-    .guide { display: none; }
-    .header { width: 100%; text-align: center; left: 0; padding: 12px; background: rgba(18, 24, 38, 0.8); border: none; border-bottom: 1px solid rgba(255,215,120,0.1); border-radius: 0; }
-  }
-</style>
+        @media (max-width: 768px) {
+            #main-panel { transform: translateX(100%); transition: transform 0.3s; width: 100%; max-width: 320px; }
+            #main-panel.open { transform: translateX(0); }
+        }
+    </style>
 </head>
 <body>
 
-<div id="container">
-  <canvas id="c"></canvas>
-
-  <div class="panel header">
-    <div class="title">RAM YANTRA</div>
-    <div class="subtitle">Jantar Mantar · Altitude & Azimuth</div>
-  </div>
-
-  <div class="panel dashboard">
-    <div class="clock" id="clk">12:00 PM</div>
-    <div class="status" id="note">Shadow at zenith</div>
-    
-    <div class="grid">
-      <div class="data-box">
-        <div class="data-label">ALTITUDE</div>
-        <div class="data-value" id="va">—</div>
-      </div>
-      <div class="data-box">
-        <div class="data-label">AZIMUTH</div>
-        <div class="data-value" id="vz">—</div>
-      </div>
-      <div class="data-box">
-        <div class="data-label">ZENITH</div>
-        <div class="data-value" id="vz2">—</div>
-      </div>
-      <div class="data-box">
-        <div class="data-label">CYLINDER</div>
-        <div class="data-value" id="vact" style="color:#68d4f4">—</div>
-      </div>
+    <div id="loader">
+        <div class="spinner mb-4"></div>
+        <div class="text-orange-accent font-bold tracking-widest uppercase">Erecting Ram Yantra...</div>
+        <div class="text-gray-500 text-xs mt-2">Aligning primary and complementary halves</div>
     </div>
-    
-    <div class="guide">
-      The glowing ray demonstrates how the pillar's top edge aligns with the sun to cast a shadow.<br><br>
-      <b>Floor:</b> 90° → 45° Altitude<br>
-      <b>Wall:</b> 45° → 0° Altitude
+
+    <!-- Title -->
+    <div class="absolute top-4 left-4 z-20 pointer-events-none">
+        <h1 class="text-3xl font-bold text-orange-accent tracking-tighter shadow-black drop-shadow-md">RAM YANTRA</h1>
+        <p class="text-xs text-gray-300 font-medium uppercase tracking-widest drop-shadow-md">Dual Instrument Simulator</p>
     </div>
-  </div>
 
-  <div class="panel controls">
-    <div class="slider-row">
-      <span class="slider-label">TIME</span>
-      <input type="range" id="tsl" min="0" max="1" step="0.001" value="0.5">
+    <!-- Mobile Toggle -->
+    <button id="mobile-toggle" class="md:hidden absolute top-4 right-4 z-30 bg-gray-900 border border-orange-500 text-orange-500 p-2 rounded shadow-lg">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+    </button>
+
+    <!-- Side Panel -->
+    <div id="main-panel" class="absolute right-0 top-0 h-full w-80 glass-panel z-20 flex flex-col shadow-2xl open md:transform-none">
+        
+        <button id="mobile-close" class="md:hidden absolute top-2 right-2 text-gray-400 hover:text-white p-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+
+        <div class="flex border-b border-gray-700 mt-10 md:mt-0">
+            <button onclick="switchTab('controls')" id="tab-controls" class="tab-btn active flex-1 py-3 text-[11px] uppercase tracking-wider transition-colors">Controls</button>
+            <button onclick="switchTab('math')" id="tab-math" class="tab-btn flex-1 py-3 text-[11px] uppercase tracking-wider transition-colors">Data</button>
+            <button onclick="switchTab('about')" id="tab-about" class="tab-btn flex-1 py-3 text-[11px] uppercase tracking-wider transition-colors">About</button>
+        </div>
+
+        <!-- Controls Tab -->
+        <div id="content-controls" class="p-5 flex-1 overflow-y-auto space-y-6">
+            
+            <!-- Instrument Toggle System -->
+            <div class="bg-gray-900/80 p-3 rounded-lg border border-gray-700">
+                <label class="block text-[10px] font-bold text-orange-500 mb-2 uppercase tracking-wider">Active Instrument Focus</label>
+                <div class="flex gap-2 mb-3">
+                    <button id="btnPrimary" onclick="manualToggle('primary')" class="flex-1 bg-orange-600 text-white font-bold text-xs py-2 rounded transition shadow-lg shadow-orange-500/20">A (Primary)</button>
+                    <button id="btnComp" onclick="manualToggle('comp')" class="flex-1 bg-gray-800 text-gray-400 font-bold hover:bg-gray-700 text-xs py-2 rounded transition">B (Complement)</button>
+                </div>
+                <label class="flex items-center space-x-2 cursor-pointer group">
+                    <input type="checkbox" id="toggleAutoSwitch" checked class="form-checkbox h-4 w-4 text-orange-500 rounded bg-gray-900 border-gray-700">
+                    <span class="text-xs text-gray-300 group-hover:text-white transition">Auto-pan camera when shadow shifts</span>
+                </label>
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-bold text-orange-500 mb-1 uppercase tracking-wider">Observatory Location</label>
+                <div class="flex gap-2 mb-2">
+                    <select id="presetLocation" class="flex-1 bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-orange-500 transition-colors">
+                        <option value="28.6271,77.2166">Delhi (28.62° N) - Jantar Mantar</option>
+                        <option value="26.9239,75.8267">Jaipur (26.92° N)</option>
+                        <option value="23.1760,75.7885">Ujjain (23.17° N)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="bg-gray-900/50 p-3 rounded-lg border border-gray-800">
+                <label class="block text-[10px] font-bold text-orange-500 mb-1 uppercase tracking-wider flex justify-between">
+                    <span>Solar Time</span>
+                    <span id="displayTime" class="font-mono text-white text-xs">12:00</span>
+                </label>
+                <input type="range" id="timeSlider" min="0" max="23.99" step="0.01" value="12">
+                <div class="flex justify-between text-[9px] text-gray-500 mt-1 font-mono">
+                    <span>00:00</span>
+                    <span>12:00</span>
+                    <span>23:59</span>
+                </div>
+                
+                <div class="flex items-center gap-2 mt-4">
+                    <button id="playPauseBtn" class="flex-1 bg-gray-800 border border-gray-700 hover:border-orange-500 text-white font-bold py-1.5 rounded text-xs transition">
+                        ▶ PLAY DAY
+                    </button>
+                    <!-- NEW LIVE BUTTON -->
+                    <button id="liveBtn" class="bg-gray-800 border border-gray-700 hover:border-red-500 text-white font-bold py-1.5 px-3 rounded text-xs transition flex items-center justify-center gap-1.5 group">
+                        <div id="liveIndicator" class="w-2 h-2 rounded-full bg-red-500 opacity-30 transition-all duration-300"></div>
+                        LIVE
+                    </button>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-bold text-orange-500 mb-1 uppercase tracking-wider">Date</label>
+                <input type="date" id="dateInput" class="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-xs text-white outline-none focus:border-orange-500">
+            </div>
+
+            <div class="space-y-2">
+                <label class="flex items-center space-x-2 cursor-pointer group">
+                    <input type="checkbox" id="toggleShadowRay" checked class="form-checkbox h-4 w-4 text-orange-500 rounded bg-gray-900 border-gray-700">
+                    <span class="text-xs text-gray-300 group-hover:text-white transition">Show Vector Rays</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Math & Data Tab -->
+        <div id="content-math" class="hidden p-5 flex-1 overflow-y-auto">
+            <div class="bg-black/60 p-4 rounded-xl border border-gray-800 mb-6 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
+                <h3 class="text-[10px] text-gray-400 uppercase tracking-widest mb-3">Live Readings (<span id="activeReadTitle">Instrument A</span>)</h3>
+                
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <span class="block text-[10px] text-gray-500 uppercase">Altitude (α)</span>
+                        <div id="valAlt" class="text-2xl font-mono text-white font-bold drop-shadow-[0_0_8px_rgba(249,115,22,0.8)]">--°</div>
+                    </div>
+                    <div>
+                        <span class="block text-[10px] text-gray-500 uppercase">Azimuth (A)</span>
+                        <div id="valAzi" class="text-2xl font-mono text-white font-bold drop-shadow-[0_0_8px_rgba(249,115,22,0.8)]">--°</div>
+                    </div>
+                </div>
+
+                <div class="border-t border-gray-800 pt-3">
+                    <span class="block text-[10px] text-gray-500 uppercase mb-1">Scale Interaction</span>
+                    <div id="shadowInfo" class="text-xs font-mono text-gray-300">Calculating...</div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <h4 class="text-[10px] font-bold text-orange-500 uppercase mb-2">Instrument Proportions</h4>
+                    <div class="bg-gray-900/50 p-3 rounded text-[11px] leading-relaxed text-gray-400 font-mono border border-gray-800 space-y-2">
+                        <p><strong>Inner Radius ($R$):</strong> 10 units</p>
+                        <p><strong>Gnomon Height ($H$):</strong> 10 units</p>
+                        <p class="text-orange-400 border-t border-gray-700 pt-2">Notice how the shadows fall in identically parallel lines across both instruments, but only one lands on a plastered scale at a time.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- About Tab -->
+        <div id="content-about" class="hidden p-5 flex-1 overflow-y-auto text-xs leading-relaxed text-gray-300 space-y-4">
+            <p><strong class="text-orange-400 text-sm">Real Ram Yantra Architecture</strong></p>
+            <p>To use the Ram Yantra, an astronomer must physically walk inside the structure to read the shadow marks. If it were a solid bowl, this would be impossible without blocking the light.</p>
+            
+            <ul class="list-disc pl-4 space-y-2">
+                <li><strong class="text-white">The Ingenious Solution:</strong> The walls and floors are cut into 12 sectors of 30° each. Every alternate sector is left completely empty (like a gap in a fence) so a person can walk through.</li>
+                <li><strong class="text-white">The Complementary Pair:</strong> Because half the walls are missing, a second identical instrument (Instrument B) is built next to it. Where Instrument A has a solid wall, Instrument B has a gap, and vice versa.</li>
+                <li><strong class="text-white">How this simulator works:</strong> Both structures are rendered side-by-side. As the sun sweeps across the sky, watch how one ray hits a wall/floor while the identical ray in the other building falls straight through the gap. The camera automatically follows the valid reading!</li>
+            </ul>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="p-2 bg-black border-t border-gray-800 flex justify-between items-center text-[9px] font-mono">
+            <div class="flex items-center gap-1.5">
+                <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                <span class="text-gray-400">ACTIVE</span>
+            </div>
+            <span id="statusBarLoc" class="text-orange-500">28.62°N, 77.21°E</span>
+        </div>
     </div>
-    <div class="slider-row">
-      <span class="slider-label">SEASON</span>
-      <input type="range" id="dsl" min="-23.5" max="23.5" step="0.1" value="20">
-    </div>
-    
-    <div class="btn-row">
-      <button id="liveBtn" onclick="toggleLive()">🔴 LIVE</button>
-      <button id="ab" onclick="toggleAnim()">▶ PLAY</button>
-      <button onclick="setV(0)">AERIAL</button>
-      <button onclick="setV(1)">FRONT</button>
-      <button onclick="setV(2)">INSIDE A</button>
-      <button onclick="setV(3)">INSIDE B</button>
-    </div>
-    
-    <div class="hint">Left Click/Drag to Rotate · Scroll to Zoom · Right Click to Pan</div>
-  </div>
-</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>
-/* ══════════════════════════════════════════════════════════════
-   RAM YANTRA — Accurate Astronomical Simulation
-══════════════════════════════════════════════════════════════ */
+    <!-- UI Logic -->
+    <script>
+        function switchTab(tab) {
+            ['controls', 'math', 'about'].forEach(t => {
+                document.getElementById(`content-${t}`).classList.add('hidden');
+                document.getElementById(`tab-${t}`).classList.remove('active');
+            });
+            document.getElementById(`content-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).classList.add('active');
+        }
 
-const LAT = 26.92 * Math.PI/180; // Latitude of Jaipur
+        document.getElementById('mobile-toggle').addEventListener('click', () => {
+            document.getElementById('main-panel').classList.add('open');
+        });
+        document.getElementById('mobile-close').addEventListener('click', () => {
+            document.getElementById('main-panel').classList.remove('open');
+        });
+    </script>
 
-// Exact Geometry Parameters
-const R = 46;             // Inner Radius of cylinder
-const H = R;              // Height of scale above floor (Exactly equals Radius)
-const FLOOR_H = 4;        // Height of floor above ground
-const WALL_T = 4.5;       // Wall thickness
-const PILLAR_R = 2.2;     // Radius of central pillar
-const NSECTORS = 12;      // 12 sectors per cylinder
-const Y_FLOOR = FLOOR_H + 1;  // Absolute Y of floor surface
-const Y_TOP = Y_FLOOR + H;    // Absolute Y of pillar top / wall top
+    <!-- Three.js Simulation -->
+    <script>
+        // --- Architectual Constants (REAL PROPORTIONS) ---
+        const HEIGHT = 10.0;           
+        const RADIUS_INNER = 10.0;     
+        const RADIUS_OUTER = 11.5;     
+        const GNOMON_RADIUS = 0.8;     
+        const SECTORS_TOTAL = 12;      
+        const SECTOR_ANGLE = (Math.PI * 2) / SECTORS_TOTAL; 
+        const OFFSET = 14.0; // Distance between the two instruments
+        
+        let state = {
+            lat: 28.6271,
+            lng: 77.2166,
+            date: new Date(),
+            time: 12.0,
+            isPlaying: false,
+            isLive: false, // NEW: Real-time Live Mode state
+            simSpeed: 0.03,
+            activeYantra: 'primary',
+            autoToggle: true,
+            targetLookAtX: -OFFSET
+        };
 
-// Dual Cylinder setup
-const CX_A = -60, CX_B = 60, CZ = 0;
+        let scene, camera, renderer, controls;
+        let sunLight, sunSphere;
+        let shadowRayPrimary, shadowRayComp;
+        let yantraGroupPrimary, yantraGroupComp;
+        
+        // Authentic Materials
+        const matSandstone = new THREE.MeshStandardMaterial({ color: 0xc46949, roughness: 0.95, metalness: 0.05 }); 
+        const matPlaster = new THREE.MeshStandardMaterial({ color: 0xe3dac9, roughness: 1.0, metalness: 0.0 });   
+        const matBase = new THREE.MeshStandardMaterial({ color: 0x8c7865, roughness: 1.0 });                      
+        const matLines = new THREE.LineBasicMaterial({ color: 0x3d2314, transparent: true, opacity: 0.7 });       
 
-let scene, camera, renderer, sunLight, hemi, sunMesh;
-let shadowDotA, shadowDotB, rayA, rayB;
-let anim = false, animT = 0.5, liveMode = false;
+        const activeRayMat = new THREE.LineBasicMaterial({ color: 0xff3300, transparent: true, opacity: 0.9, linewidth: 2 });
+        const inactiveRayMat = new THREE.LineBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.15, linewidth: 1 });
 
-// Interaction state
-let cam = {theta: -0.45, phi: 0.6, r: 240, tx: 0, ty: 25, tz: 0};
-let mouse = {down: false, px: 0, py: 0, btn: 0};
+        init();
+        animate();
 
-const VIEWS = [
-  {theta: -0.45, phi: 0.60, r: 240, tx: 0, ty: 20, tz: 0},     // Aerial
-  {theta: -0.05, phi: 0.85, r: 220, tx: 0, ty: 15, tz: 40},    // Front
-  {theta: -0.75, phi: 1.15, r: 75, tx: CX_A, ty: 15, tz: 15},  // Inside A
-  {theta: -0.75, phi: 1.15, r: 75, tx: CX_B, ty: 15, tz: 15},  // Inside B
-];
+        function init() {
+            const container = document.createElement('div');
+            document.body.appendChild(container);
 
-let M = {};
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x111118);
+            scene.fog = new THREE.FogExp2(0x111118, 0.003);
 
-/* ── INITIALIZATION ── */
-function init() {
-  const cv = document.getElementById('c');
-  const W = cv.clientWidth, H2 = cv.clientHeight;
-  
-  renderer = new THREE.WebGLRenderer({canvas: cv, antialias: true, powerPreference: 'high-performance'});
-  renderer.setSize(W, H2, false);
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.1;
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(-OFFSET + 20, 25, 30);
 
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x182434);
-  scene.fog = new THREE.FogExp2(0x182434, 0.0015);
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
 
-  camera = new THREE.PerspectiveCamera(40, W/H2, 0.5, 2000);
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.05; 
+            controls.minDistance = 2;
+            controls.maxDistance = 150;
+            controls.target.set(-OFFSET, HEIGHT/2, 0); // Start looking at primary
 
-  // Lighting
-  scene.add(new THREE.AmbientLight(0xffeacc, 0.35));
-  hemi = new THREE.HemisphereLight(0xbbeeff, 0x553322, 0.4); 
-  scene.add(hemi);
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.35);
+            scene.add(ambientLight);
 
-  sunLight = new THREE.DirectionalLight(0xfff5e0, 2.5);
-  sunLight.castShadow = true;
-  const sc = sunLight.shadow.camera;
-  sunLight.shadow.mapSize.set(4096, 4096);
-  sc.near = 10; sc.far = 1000;
-  sc.left = -180; sc.right = 180; sc.top = 180; sc.bottom = -180;
-  sunLight.shadow.bias = -0.0005;
-  scene.add(sunLight);
-  scene.add(sunLight.target);
+            sunLight = new THREE.DirectionalLight(0xfff5e6, 1.8);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 4096; 
+            sunLight.shadow.mapSize.height = 4096;
+            sunLight.shadow.camera.near = 10;
+            sunLight.shadow.camera.far = 200;
+            // Widen shadow frustum to cover both structures
+            const d = 40;
+            sunLight.shadow.camera.left = -d;
+            sunLight.shadow.camera.right = d;
+            sunLight.shadow.camera.top = d;
+            sunLight.shadow.camera.bottom = -d;
+            sunLight.shadow.bias = -0.0001; 
+            scene.add(sunLight);
 
-  createMaterials();
-  const fTex = createFloorTexture();
-  const wTex = createWallTexture();
+            // Sun Visual
+            const sunGeo = new THREE.SphereGeometry(2, 32, 32);
+            const sunMat = new THREE.MeshBasicMaterial({ color: 0xffdd44 });
+            sunSphere = new THREE.Mesh(sunGeo, sunMat);
+            scene.add(sunSphere);
 
-  // Environment
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), M.ground);
-  ground.rotation.x = -Math.PI/2; ground.position.y = -1; ground.receiveShadow = true; scene.add(ground);
-  
-  const platform = new THREE.Mesh(new THREE.BoxGeometry(280, FLOOR_H, 180), M.platform);
-  platform.position.y = FLOOR_H/2; platform.receiveShadow = true; platform.castShadow = true; scene.add(platform);
+            // Vector Rays for both
+            const rayGeoPrim = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+            shadowRayPrimary = new THREE.Line(rayGeoPrim, activeRayMat);
+            scene.add(shadowRayPrimary);
 
-  // Build the Instruments
-  buildCylinder(CX_A, 0, CZ, true, fTex, wTex);
-  buildCylinder(CX_B, 0, CZ, false, fTex, wTex);
+            const rayGeoComp = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+            shadowRayComp = new THREE.Line(rayGeoComp, inactiveRayMat);
+            scene.add(shadowRayComp);
 
-  // Sun visual
-  sunMesh = new THREE.Mesh(new THREE.SphereGeometry(12, 32, 32), new THREE.MeshBasicMaterial({color: 0xffffee}));
-  scene.add(sunMesh);
-  
-  // Create interactive indicator visuals
-  shadowDotA = createShadowDot(0xff3300);
-  shadowDotB = createShadowDot(0x00aaff);
-  rayA = createRayLine(0xffaa00);
-  rayB = createRayLine(0x00ccff);
+            // Ground Base
+            const groundGeo = new THREE.PlaneGeometry(300, 300);
+            const groundMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = -0.25; 
+            ground.receiveShadow = true;
+            scene.add(ground);
 
-  // Event Listeners
-  cv.addEventListener('mousedown', e => { mouse.down=true; mouse.px=e.clientX; mouse.py=e.clientY; mouse.btn=e.button; });
-  window.addEventListener('mouseup', () => mouse.down=false);
-  window.addEventListener('mousemove', onMove);
-  cv.addEventListener('wheel', e => { cam.r = Math.max(30, Math.min(600, cam.r + e.deltaY * 0.2)); e.preventDefault(); }, {passive: false});
-  cv.addEventListener('contextmenu', e => e.preventDefault());
-  
-  cv.addEventListener('touchstart', e => { if(e.touches.length===1){ mouse.down=true; mouse.px=e.touches[0].clientX; mouse.py=e.touches[0].clientY; mouse.btn=0; }},{passive:true});
-  window.addEventListener('touchend', () => mouse.down=false);
-  cv.addEventListener('touchmove', e => { if(e.touches.length===1){ onMove({clientX:e.touches[0].clientX, clientY:e.touches[0].clientY, buttons:1}); e.preventDefault(); }},{passive:false});
+            const grid = new THREE.GridHelper(300, 150, 0x333333, 0x222222);
+            grid.position.y = -0.24;
+            scene.add(grid);
 
-  document.getElementById('tsl').addEventListener('input', e => { if(!liveMode && !anim) updateSun(+e.target.value, +document.getElementById('dsl').value); });
-  document.getElementById('dsl').addEventListener('input', () => { if(!liveMode) updateSun(+document.getElementById('tsl').value, +document.getElementById('dsl').value); });
+            // Construct Yantras Side by Side
+            yantraGroupPrimary = buildRamYantra(false);
+            yantraGroupPrimary.position.set(-OFFSET, 0, 0);
+            scene.add(yantraGroupPrimary);
 
-  window.addEventListener('resize', onResize);
+            yantraGroupComp = buildRamYantra(true);
+            yantraGroupComp.position.set(OFFSET, 0, 0);
+            scene.add(yantraGroupComp);
 
-  updateSun(0.5, 20);
-  requestAnimationFrame(loop);
-}
+            setupEventListeners();
+            
+            // Set initial date
+            document.getElementById('dateInput').valueAsDate = state.date;
+            
+            setTimeout(() => {
+                const loader = document.getElementById('loader');
+                loader.style.opacity = '0';
+                setTimeout(() => loader.remove(), 800);
+            }, 1200);
 
-function createMaterials() {
-  M.brick = new THREE.MeshStandardMaterial({color: 0xd86a50, roughness: 0.8});
-  M.brickD = new THREE.MeshStandardMaterial({color: 0xa84a30, roughness: 0.9});
-  M.marble = new THREE.MeshStandardMaterial({color: 0xfffcf5, roughness: 0.4});
-  M.platform = new THREE.MeshStandardMaterial({color: 0xc89a70, roughness: 0.85});
-  M.ground = new THREE.MeshStandardMaterial({color: 0x556050, roughness: 0.95});
-  M.pillar = new THREE.MeshStandardMaterial({color: 0xeddac0, roughness: 0.6});
-}
+            window.addEventListener('resize', onWindowResize, false);
+            updateAstronomy();
+        }
 
-function createFloorTexture() {
-  const W=1024, c=document.createElement('canvas').getContext('2d');
-  c.canvas.width=W; c.canvas.height=W;
-  c.fillStyle='#f0e8d8'; c.fillRect(0,0,W,W);
-  const cx=W/2, cy=W/2;
-  
-  // Altitude Arcs
-  for(let alt=45; alt<=90; alt+=5) {
-    const rad = ((90-alt)/45)*(W/2 - 20);
-    c.beginPath(); c.arc(cx, cy, rad, 0, Math.PI*2);
-    c.strokeStyle = alt%15===0 ? '#332211' : '#a08060';
-    c.lineWidth = alt%15===0 ? 3 : 1; c.stroke();
-    if(alt%15===0 && rad>20) {
-      c.font='bold 24px Georgia'; c.fillStyle='#332211'; c.textAlign='center';
-      c.fillText(alt+'°', cx+rad, cy-8);
-    }
-  }
-  
-  // Azimuth Lines
-  for(let az=0; az<360; az+=30) {
-    const rad = (az-90)*Math.PI/180; // offset so 0 is Up/North
-    c.strokeStyle = az%90===0 ? '#332211' : '#8a6040';
-    c.lineWidth = az%90===0 ? 3 : 1;
-    c.beginPath(); c.moveTo(cx,cy); c.lineTo(cx+Math.cos(rad)*W/2, cy+Math.sin(rad)*W/2); c.stroke();
-    if(az%30===0) {
-      c.font='22px Georgia'; c.fillStyle='#332211';
-      c.fillText(az+'°', cx+Math.cos(rad)*(W/2-30), cy+Math.sin(rad)*(W/2-30)+8);
-    }
-  }
-  return new THREE.CanvasTexture(c.canvas);
-}
+        function buildRamYantra(isComplementary) {
+            const group = new THREE.Group();
 
-function createWallTexture() {
-  const W=2048, H2=512, c=document.createElement('canvas').getContext('2d');
-  c.canvas.width=W; c.canvas.height=H2;
-  c.fillStyle='#f0e8d8'; c.fillRect(0,0,W,H2);
-  
-  // Azimuth verticals
-  for(let az=0; az<=360; az+=15) {
-    const x = (az/360)*W;
-    c.strokeStyle = az%90===0 ? '#332211' : '#a08060';
-    c.lineWidth = az%90===0 ? 4 : 1.5;
-    c.beginPath(); c.moveTo(x,0); c.lineTo(x,H2); c.stroke();
-    if(az%30===0) { c.font='bold 28px Georgia'; c.fillStyle='#332211'; c.textAlign='center'; c.fillText(az+'°', x, H2-15); }
-  }
-  // Altitude horizontals (45 at bottom, 0 at top)
-  for(let alt=0; alt<=45; alt+=5) {
-    const y = H2 - (alt/45)*H2;
-    c.strokeStyle = alt%15===0 ? '#332211' : '#a08060';
-    c.lineWidth = alt%15===0 ? 3 : 1;
-    c.beginPath(); c.moveTo(0,y); c.lineTo(W,y); c.stroke();
-    if(alt%15===0 && alt>0) { c.font='26px Georgia'; c.fillStyle='#332211'; c.textAlign='left'; c.fillText(alt+'°', 10, y-10); }
-  }
-  return new THREE.CanvasTexture(c.canvas);
-}
+            const gnomonGeo = new THREE.CylinderGeometry(GNOMON_RADIUS, GNOMON_RADIUS, HEIGHT, 32);
+            const gnomon = new THREE.Mesh(gnomonGeo, matSandstone);
+            gnomon.position.y = HEIGHT / 2;
+            gnomon.castShadow = true;
+            gnomon.receiveShadow = true;
+            group.add(gnomon);
 
-function buildCylinder(cx, cy, cz, isA, fTex, wTex) {
-  const g = new THREE.Group();
-  g.position.set(cx, cy, cz);
+            const pinGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.2, 8);
+            const pin = new THREE.Mesh(pinGeo, new THREE.MeshStandardMaterial({color: 0x444444, metalness: 0.8}));
+            pin.position.y = HEIGHT + 0.1;
+            pin.castShadow = true;
+            group.add(pin);
 
-  const matFloor = new THREE.MeshStandardMaterial({map: fTex, roughness: 0.5});
-  const matWall = new THREE.MeshStandardMaterial({map: wTex, roughness: 0.6, side: THREE.DoubleSide});
+            const baseGeo = new THREE.RingGeometry(GNOMON_RADIUS, RADIUS_OUTER + 1, 64);
+            const base = new THREE.Mesh(baseGeo, matBase);
+            base.rotation.x = -Math.PI/2;
+            base.position.y = 0;
+            base.receiveShadow = true;
+            group.add(base);
 
-  // Solid ring base
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(R+WALL_T+1, R+WALL_T+2, FLOOR_H, 64), M.brickD);
-  base.position.y = FLOOR_H/2; base.receiveShadow=true; base.castShadow=true; g.add(base);
+            for (let i = 0; i < SECTORS_TOTAL; i++) {
+                const isSolid = isComplementary ? (i % 2 !== 0) : (i % 2 === 0);
+                
+                if (isSolid) {
+                    const startAngle = i * SECTOR_ANGLE;
+                    
+                    const floorShape = new THREE.Shape();
+                    floorShape.absarc(0, 0, RADIUS_INNER, startAngle, startAngle + SECTOR_ANGLE, false);
+                    floorShape.absarc(0, 0, GNOMON_RADIUS, startAngle + SECTOR_ANGLE, startAngle, true);
+                    
+                    const extrudeFloor = { depth: 0.2, bevelEnabled: false, curveSegments: 32 };
+                    const floorGeo = new THREE.ExtrudeGeometry(floorShape, extrudeFloor);
+                    const floor = new THREE.Mesh(floorGeo, matPlaster); 
+                    floor.rotation.x = -Math.PI / 2;
+                    floor.position.y = 0.2; 
+                    floor.receiveShadow = true;
+                    group.add(floor);
 
-  // Outer Wall with Arches
-  const NW = 72, NA = 12;
-  const archAngles = Array.from({length:NA}, (_,i) => i*Math.PI*2/NA);
-  
-  for(let i=0; i<NW; i++) {
-    const a1 = (i/NW)*Math.PI*2, a2 = ((i+1)/NW)*Math.PI*2, mA = (a1+a2)/2;
-    const isArch = archAngles.some(aa => Math.abs(((mA-aa+Math.PI*3)%(Math.PI*2))-Math.PI) < 0.15);
-    const chord = 2*(R+WALL_T/2)*Math.sin(Math.PI/NW);
-    
-    if(isArch) {
-      const archH = H*0.6;
-      const pil = new THREE.Mesh(new THREE.BoxGeometry(1.5, H, WALL_T), M.brickD);
-      pil.position.set(Math.cos(mA-0.12)*(R+WALL_T/2), Y_FLOOR+H/2, -Math.sin(mA-0.12)*(R+WALL_T/2));
-      pil.rotation.y = mA; pil.castShadow=true; g.add(pil);
-      
-      const pil2 = pil.clone();
-      pil2.position.set(Math.cos(mA+0.12)*(R+WALL_T/2), Y_FLOOR+H/2, -Math.sin(mA+0.12)*(R+WALL_T/2));
-      g.add(pil2);
-    } else {
-      const wallSeg = new THREE.Mesh(new THREE.BoxGeometry(chord+0.2, H, WALL_T-0.5), matWall);
-      wallSeg.position.set(Math.cos(mA)*(R+WALL_T/2), Y_FLOOR+H/2, -Math.sin(mA)*(R+WALL_T/2));
-      wallSeg.rotation.y = mA; wallSeg.castShadow=true; wallSeg.receiveShadow=true; g.add(wallSeg);
-    }
-  }
+                    for(let step = 1; step <= 6; step++) {
+                        const lineAngle = startAngle + (step/6)*SECTOR_ANGLE;
+                        const lineGeo = new THREE.BufferGeometry().setFromPoints([
+                            new THREE.Vector3(GNOMON_RADIUS, 0.21, 0).applyAxisAngle(new THREE.Vector3(0,1,0), -lineAngle),
+                            new THREE.Vector3(RADIUS_INNER, 0.21, 0).applyAxisAngle(new THREE.Vector3(0,1,0), -lineAngle)
+                        ]);
+                        group.add(new THREE.Line(lineGeo, matLines));
+                    }
 
-  // Top Coping
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(R+WALL_T/2, WALL_T/2, 8, 64), M.marble);
-  rim.rotation.x = Math.PI/2; rim.position.y = Y_TOP; rim.castShadow=true; g.add(rim);
+                    const wallShape = new THREE.Shape();
+                    wallShape.absarc(0, 0, RADIUS_OUTER, startAngle, startAngle + SECTOR_ANGLE, false);
+                    wallShape.absarc(0, 0, RADIUS_INNER, startAngle + SECTOR_ANGLE, startAngle, true);
+                    
+                    const extrudeWall = { depth: HEIGHT, bevelEnabled: false, curveSegments: 32 };
+                    const wallGeo = new THREE.ExtrudeGeometry(wallShape, extrudeWall);
+                    const wall = new THREE.Mesh(wallGeo, [matSandstone, matSandstone]); 
+                    wall.rotation.x = -Math.PI / 2;
+                    wall.castShadow = true;
+                    wall.receiveShadow = true;
+                    group.add(wall);
 
-  // Raised Sectors
-  const sAngle = Math.PI*2/NSECTORS;
-  for(let i=0; i<NSECTORS; i++) {
-    if((i%2===0) !== isA) continue; // Alternate missing sectors
-    
-    const shape = new THREE.Shape();
-    shape.moveTo(0,0);
-    for(let p=0; p<=10; p++) {
-      const a = i*sAngle + (p/10)*sAngle;
-      shape.lineTo(Math.cos(a)*(R-0.2), Math.sin(a)*(R-0.2));
-    }
-    shape.lineTo(0,0);
-    
-    const hole = new THREE.Path();
-    for(let p=0; p<=10; p++) {
-      const a = i*sAngle + (p/10)*sAngle;
-      hole.lineTo(Math.cos(a)*(PILLAR_R+0.5), Math.sin(a)*(PILLAR_R+0.5));
-    }
-    shape.holes.push(hole);
+                    const innerFaceGeo = new THREE.CylinderGeometry(RADIUS_INNER, RADIUS_INNER, HEIGHT, 32, 1, true, startAngle, SECTOR_ANGLE);
+                    const innerFace = new THREE.Mesh(innerFaceGeo, matPlaster);
+                    innerFace.position.y = HEIGHT / 2;
+                    innerFace.receiveShadow = true;
+                    group.add(innerFace);
 
-    const sGeo = new THREE.ExtrudeGeometry(shape, {depth: 1.5, bevelEnabled: false});
-    const sector = new THREE.Mesh(sGeo, matFloor);
-    sector.rotation.x = Math.PI/2; // Orient correctly
-    sector.position.y = Y_FLOOR;
-    sector.receiveShadow=true; sector.castShadow=true;
-    g.add(sector);
-  }
+                    const altitudesToMark = [10, 20, 30, 40, 45, 50, 60, 70, 80];
+                    altitudesToMark.forEach(alt => {
+                        const altRad = alt * Math.PI / 180;
+                        const drop = RADIUS_INNER / Math.tan(altRad); 
+                        const h = HEIGHT - drop; 
+                        
+                        if (h > 0 && h < HEIGHT) {
+                            const ringGeo = new THREE.CylinderGeometry(RADIUS_INNER * 0.995, RADIUS_INNER * 1.005, 0.04, 32, 1, true, startAngle, SECTOR_ANGLE);
+                            const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0x5a3a29 }));
+                            ring.position.y = h;
+                            group.add(ring);
+                        }
+                    });
+                }
+            }
 
-  // Central Pillar
-  const pillar = new THREE.Mesh(new THREE.CylinderGeometry(PILLAR_R, PILLAR_R*1.1, Y_TOP, 32), M.pillar);
-  pillar.position.y = Y_TOP/2; pillar.castShadow=true; pillar.receiveShadow=true; g.add(pillar);
-  
-  const cap = new THREE.Mesh(new THREE.CylinderGeometry(PILLAR_R*1.5, PILLAR_R*1.2, 1, 32), M.marble);
-  cap.position.y = Y_TOP; cap.castShadow=true; g.add(cap);
+            return group;
+        }
 
-  scene.add(g);
-}
+        function manualToggle(type) {
+            state.autoToggle = false;
+            document.getElementById('toggleAutoSwitch').checked = false;
+            applyToggleUI(type);
+            updateAstronomy();
+        }
 
-function createShadowDot(col) {
-  const g = new THREE.Group();
-  g.add(new THREE.Mesh(new THREE.SphereGeometry(1.2, 16, 16), new THREE.MeshBasicMaterial({color: col})));
-  g.add(new THREE.Mesh(new THREE.TorusGeometry(3, 0.4, 8, 24), new THREE.MeshBasicMaterial({color: col, transparent: true, opacity: 0.8})));
-  g.visible = false;
-  scene.add(g);
-  return g;
-}
+        function applyToggleUI(type) {
+            state.activeYantra = type;
+            state.targetLookAtX = (type === 'primary') ? -OFFSET : OFFSET;
+            
+            if (type === 'primary') {
+                document.getElementById('btnPrimary').className = "flex-1 bg-orange-600 text-white font-bold text-xs py-2 rounded transition shadow-lg shadow-orange-500/20";
+                document.getElementById('btnComp').className = "flex-1 bg-gray-800 text-gray-400 font-bold hover:bg-gray-700 text-xs py-2 rounded transition";
+                document.getElementById('activeReadTitle').innerText = "Instrument A";
+                shadowRayPrimary.material = activeRayMat;
+                shadowRayComp.material = inactiveRayMat;
+            } else {
+                document.getElementById('btnComp').className = "flex-1 bg-orange-600 text-white font-bold text-xs py-2 rounded transition shadow-lg shadow-orange-500/20";
+                document.getElementById('btnPrimary').className = "flex-1 bg-gray-800 text-gray-400 font-bold hover:bg-gray-700 text-xs py-2 rounded transition";
+                document.getElementById('activeReadTitle').innerText = "Instrument B";
+                shadowRayPrimary.material = inactiveRayMat;
+                shadowRayComp.material = activeRayMat;
+            }
+        }
 
-function createRayLine(col) {
-  const mat = new THREE.LineBasicMaterial({color: col, transparent: true, opacity: 0.7, linewidth: 2});
-  const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
-  const line = new THREE.Line(geo, mat);
-  line.visible = false;
-  scene.add(line);
-  return line;
-}
+        // --- Math & Simulation Logic ---
+        function updateAstronomy() {
+            const latRad = state.lat * (Math.PI / 180);
+            const start = new Date(state.date.getFullYear(), 0, 0);
+            const diff = state.date - start;
+            const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-/* ── ASTRONOMICAL MATH ── */
-function updateSun(t, declDeg) {
-  // Time: t=0 -> 6 AM, t=1 -> 6 PM. t=0.5 -> 12 Noon.
-  const hours = 6 + t * 12;
-  const ha = (hours - 12) * 15 * Math.PI/180; // Hour angle
-  const d = declDeg * Math.PI/180;            // Declination
+            const decDeg = 23.45 * Math.sin((360 / 365) * (dayOfYear - 81) * Math.PI / 180);
+            const decRad = decDeg * (Math.PI / 180);
+            const hourAngleDeg = 15 * (state.time - 12);
+            const hRad = hourAngleDeg * (Math.PI / 180);
 
-  // Exact Spherical Trigonometry for Altitude
-  const sinAlt = Math.sin(LAT)*Math.sin(d) + Math.cos(LAT)*Math.cos(d)*Math.cos(ha);
-  const alt = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
-  const altDeg = alt * 180/Math.PI;
+            const sinAlt = Math.sin(latRad) * Math.sin(decRad) + Math.cos(latRad) * Math.cos(decRad) * Math.cos(hRad);
+            let altitudeRad = Math.asin(sinAlt);
+            let altitudeDeg = altitudeRad * (180 / Math.PI);
 
-  // Exact Spherical Trigonometry for Azimuth (from North)
-  let azi = 0;
-  if (Math.abs(Math.cos(alt)) > 0.001) {
-    const cosAzi = (Math.sin(d) - Math.sin(LAT)*sinAlt) / (Math.cos(LAT)*Math.cos(alt));
-    azi = Math.acos(Math.max(-1, Math.min(1, cosAzi)));
-    if (ha > 0) azi = 2*Math.PI - azi; // Afternoon
-  }
-  const aziDeg = azi * 180/Math.PI;
-  const isDay = alt > 0;
+            let azimuthDeg = 0;
+            if (altitudeDeg > 0) {
+                const cosAzi = (Math.sin(decRad) - Math.sin(latRad) * sinAlt) / (Math.cos(latRad) * Math.cos(altitudeRad));
+                const clampedCos = Math.max(-1, Math.min(1, cosAzi));
+                let azimuthRad = Math.acos(clampedCos);
+                if (hourAngleDeg > 0) azimuthRad = (2 * Math.PI) - azimuthRad;
+                azimuthDeg = azimuthRad * (180 / Math.PI);
+            }
 
-  // Setup Visual Sun Position (N=-Z, E=+X, S=+Z, W=-X)
-  const dist = 600;
-  const sx = Math.sin(azi) * Math.cos(alt) * dist;
-  const sy = Math.sin(alt) * dist;
-  const sz = -Math.cos(azi) * Math.cos(alt) * dist;
-  
-  sunLight.position.set(sx, sy, sz);
-  sunMesh.position.set(sx, sy, sz);
-  sunMesh.visible = isDay;
+            updateUI(altitudeDeg, azimuthDeg);
+            updateSunPosition(altitudeDeg, azimuthDeg);
+        }
 
-  // Environment Lighting adjustments based on altitude
-  const intensity = Math.max(0, Math.sin(alt));
-  const warm = Math.max(0, 1 - intensity*3);
-  scene.background.setRGB(isDay ? 0.08+intensity*0.1+warm*0.1 : 0.05, isDay ? 0.12+intensity*0.2 : 0.07, isDay ? 0.20+intensity*0.3-warm*0.1 : 0.10);
-  scene.fog.color.copy(scene.background);
-  sunLight.intensity = isDay ? 0.5 + intensity * 2.5 : 0;
-  hemi.intensity = isDay ? 0.2 + intensity * 0.4 : 0.05;
+        function updateSunPosition(altDeg, aziDeg) {
+            if (altDeg <= 0) {
+                sunLight.intensity = 0;
+                sunSphere.visible = false;
+                shadowRayPrimary.visible = false;
+                shadowRayComp.visible = false;
+                scene.background = new THREE.Color(0x0a0a0f);
+                document.getElementById('shadowInfo').innerHTML = "<span class='text-gray-500'>Night - No Shadow</span>";
+                return;
+            }
 
-  // SHADOW CALCULATION
-  const shadowAzi = azi + Math.PI; // Shadow casts away from sun
-  let dx = 0, dy = Y_FLOOR, dz = 0;
-  let isOnFloor = true;
+            sunLight.intensity = Math.max(0.4, Math.min(1.8, altDeg / 20));
+            sunSphere.visible = true;
+            
+            const showRays = document.getElementById('toggleShadowRay').checked;
+            shadowRayPrimary.visible = showRays;
+            shadowRayComp.visible = showRays;
+            
+            const skyColor = new THREE.Color().setHSL(0.55, 0.6, Math.max(0.1, Math.min(0.3, altDeg / 60)));
+            scene.background = skyColor;
+            scene.fog.color = skyColor;
 
-  if (isDay) {
-    const d_h = H / Math.tan(alt); // Horizontal distance of shadow from center
-    
-    if (d_h <= R) {
-      // Shadow hits the floor
-      dx = Math.sin(shadowAzi) * d_h;
-      dz = -Math.cos(shadowAzi) * d_h;
-      dy = Y_FLOOR;
-    } else {
-      // Shadow hits the wall
-      isOnFloor = false;
-      dx = Math.sin(shadowAzi) * R;
-      dz = -Math.cos(shadowAzi) * R;
-      const d_v = R * Math.tan(alt); // Vertical drop from top
-      dy = Y_TOP - d_v; 
-    }
-  }
+            const altRad = altDeg * Math.PI / 180;
+            const aziRad = aziDeg * Math.PI / 180;
 
-  // Determine Active Cylinder based on shadow azimuth
-  // Sectors are 30° wide.
-  const shadowAziDeg = (shadowAzi * 180/Math.PI) % 360;
-  const sectorIdx = Math.floor(shadowAziDeg / (360/NSECTORS));
-  const activeA = (sectorIdx % 2 === 0);
+            const sunDist = 150;
+            const dirX = Math.cos(altRad) * Math.sin(aziRad);
+            const dirY = Math.sin(altRad);
+            const dirZ = -Math.cos(altRad) * Math.cos(aziRad); 
 
-  // Update Visuals
-  if (isDay && altDeg > 1) { // Hide ray right at horizon to avoid artifacts
-    if (activeA) {
-      shadowDotA.position.set(CX_A + dx, dy, dz); shadowDotA.visible = true;
-      rayA.geometry.setFromPoints([new THREE.Vector3(CX_A, Y_TOP, 0), new THREE.Vector3(CX_A + dx, dy, dz)]); rayA.visible = true;
-      shadowDotB.visible = false; rayB.visible = false;
-    } else {
-      shadowDotB.position.set(CX_B + dx, dy, dz); shadowDotB.visible = true;
-      rayB.geometry.setFromPoints([new THREE.Vector3(CX_B, Y_TOP, 0), new THREE.Vector3(CX_B + dx, dy, dz)]); rayB.visible = true;
-      shadowDotA.visible = false; rayA.visible = false;
-    }
-  } else {
-    shadowDotA.visible = rayA.visible = shadowDotB.visible = rayB.visible = false;
-  }
+            sunLight.position.set(dirX * sunDist, dirY * sunDist, dirZ * sunDist);
+            sunSphere.position.set(dirX * sunDist, dirY * sunDist, dirZ * sunDist);
 
-  // UI Updates
-  document.getElementById('va').textContent = isDay ? altDeg.toFixed(1) + '°' : '—';
-  document.getElementById('vz').textContent = isDay ? aziDeg.toFixed(1) + '°' : '—';
-  document.getElementById('vz2').textContent = isDay ? (90 - altDeg).toFixed(1) + '°' : '—';
-  
-  const vact = document.getElementById('vact');
-  vact.textContent = !isDay ? '—' : activeA ? 'CYLINDER A' : 'CYLINDER B';
-  vact.style.color = !isDay ? '#888' : activeA ? '#ffb347' : '#68d4f4';
+            // Shadow Ray Intersection Math (Local relative vector)
+            const sx = -dirX; 
+            const sy = -dirY;
+            const sz = -dirZ;
 
-  const h = Math.floor(hours), m = Math.floor((hours%1)*60), ap = h>=12 ? 'PM' : 'AM', dh = h%12 || 12;
-  document.getElementById('clk').textContent = `${dh}:${m.toString().padStart(2,'0')} ${ap}`;
-  document.getElementById('note').textContent = !isDay ? 'Night — Sun below horizon' : isOnFloor ? 'Shadow resting on Floor scale' : 'Shadow resting on Wall scale';
-}
+            let shadowAngleDeg = Math.atan2(sz, sx) * 180 / Math.PI;
+            if (shadowAngleDeg < 0) shadowAngleDeg += 360;
+            
+            const sectorIndex = Math.floor(shadowAngleDeg / 30) % 12;
+            const hitsPrimarySolid = (sectorIndex % 2 === 0);
+            
+            if (state.autoToggle) {
+                const targetYantra = hitsPrimarySolid ? 'primary' : 'comp';
+                if (state.activeYantra !== targetYantra) applyToggleUI(targetYantra);
+            }
 
-/* ── INTERACTION & LOOP ── */
-function onMove(e) {
-  if (!mouse.down) return;
-  const dx = e.clientX - mouse.px, dy = e.clientY - mouse.py;
-  if (e.buttons === 2 || mouse.btn === 2) { cam.tx -= dx*0.1; cam.tz -= dy*0.1; }
-  else { cam.theta -= dx*0.005; cam.phi = Math.max(0.1, Math.min(Math.PI*0.48, cam.phi + dy*0.005)); }
-  mouse.px = e.clientX; mouse.py = e.clientY;
-}
+            // Calculations shared for hit mapping
+            const tFloor = (0.2 - HEIGHT) / sy;
+            const hitFloorX = sx * tFloor;
+            const hitFloorZ = sz * tFloor;
+            const distFloorSq = hitFloorX*hitFloorX + hitFloorZ*hitFloorZ;
 
-function setV(i) { Object.assign(cam, VIEWS[i]); }
+            function getHitData(isValid) {
+                let hitPoint, infoText;
+                if (!isValid) {
+                    const t = (-0.25 - HEIGHT) / sy;
+                    hitPoint = new THREE.Vector3(sx * t, -0.25, sz * t);
+                    infoText = `<span class='text-red-400 font-bold'>⚠️ Shadow falls in empty space!</span><br>Check the complementary instrument.`;
+                } else {
+                    if (distFloorSq <= RADIUS_INNER * RADIUS_INNER) {
+                        hitPoint = new THREE.Vector3(hitFloorX, 0.2, hitFloorZ);
+                        const dist = Math.sqrt(distFloorSq);
+                        if (dist < GNOMON_RADIUS) {
+                            infoText = `<span class='text-gray-400'>Shadow on Gnomon base.</span>`;
+                        } else {
+                            infoText = `<span class='text-green-400'>Floor Reading: Azimuth Valid.</span><br>Distance: ${dist.toFixed(2)} u`;
+                        }
+                    } else {
+                        const tWallSq = (RADIUS_INNER * RADIUS_INNER) / (sx*sx + sz*sz);
+                        const tWall = Math.sqrt(tWallSq);
+                        const hitY = HEIGHT + sy * tWall;
+                        hitPoint = new THREE.Vector3(sx * tWall, hitY, sz * tWall);
+                        infoText = `<span class='text-orange-400'>Wall Reading: Altitude Valid.</span><br>Height mark: ${hitY.toFixed(2)} u`;
+                    }
+                }
+                return { hitPoint, infoText };
+            }
 
-function toggleAnim() {
-  anim = !anim;
-  if(anim) liveMode = false;
-  syncButtons();
-}
+            const primaryData = getHitData(hitsPrimarySolid);
+            const compData = getHitData(!hitsPrimarySolid);
 
-function toggleLive() {
-  liveMode = !liveMode;
-  if(liveMode) anim = false;
-  syncButtons();
-}
+            const rayPosPrimary = new Float32Array([
+                -OFFSET, HEIGHT, 0, 
+                -OFFSET + primaryData.hitPoint.x, primaryData.hitPoint.y, primaryData.hitPoint.z
+            ]);
+            shadowRayPrimary.geometry.setAttribute('position', new THREE.BufferAttribute(rayPosPrimary, 3));
 
-function syncButtons() {
-  document.getElementById('ab').textContent = anim ? '⏸ PAUSE' : '▶ PLAY';
-  document.getElementById('ab').className = anim ? 'active-btn' : '';
-  document.getElementById('liveBtn').className = liveMode ? 'active-btn' : '';
-}
+            const rayPosComp = new Float32Array([
+                OFFSET, HEIGHT, 0, 
+                OFFSET + compData.hitPoint.x, compData.hitPoint.y, compData.hitPoint.z
+            ]);
+            shadowRayComp.geometry.setAttribute('position', new THREE.BufferAttribute(rayPosComp, 3));
 
-function loop() {
-  requestAnimationFrame(loop);
-  
-  if (liveMode) {
-    const now = new Date();
-    // Calculate time of day as 0..1 from 6AM to 6PM
-    let h = now.getHours() + now.getMinutes()/60 + now.getSeconds()/3600;
-    let t = (h - 6) / 12;
-    t = Math.max(0, Math.min(1, t)); // clamp to slider bounds visually
-    
-    // Approximate declination based on day of year
-    const start = new Date(now.getFullYear(), 0, 0);
-    const dayOfYear = Math.floor((now - start) / 86400000);
-    const decl = -23.44 * Math.cos((360/365 * (dayOfYear + 10)) * Math.PI/180);
-    
-    document.getElementById('tsl').value = t;
-    document.getElementById('dsl').value = decl;
-    updateSun(t, decl);
-  } else if (anim) {
-    animT = (animT + 0.0003) % 1;
-    document.getElementById('tsl').value = animT;
-    updateSun(animT, +document.getElementById('dsl').value);
-  }
+            document.getElementById('shadowInfo').innerHTML = state.activeYantra === 'primary' ? primaryData.infoText : compData.infoText;
+        }
 
-  // Camera damping
-  camera.position.set(
-    cam.tx + cam.r * Math.sin(cam.phi) * Math.cos(cam.theta),
-    cam.ty + cam.r * Math.cos(cam.phi),
-    cam.tz + cam.r * Math.sin(cam.phi) * Math.sin(cam.theta)
-  );
-  camera.lookAt(cam.tx, cam.ty, cam.tz);
-  
-  // Pulse animation on shadow dot
-  const pulse = 1 + 0.2 * Math.sin(Date.now() * 0.005);
-  if(shadowDotA.visible) shadowDotA.children[1].scale.setScalar(pulse);
-  if(shadowDotB.visible) shadowDotB.children[1].scale.setScalar(pulse);
+        function updateUI(alt, azi) {
+            document.getElementById('valAlt').innerText = alt > 0 ? alt.toFixed(2) + '°' : 'NIGHT';
+            document.getElementById('valAzi').innerText = alt > 0 ? azi.toFixed(2) + '°' : '---';
 
-  renderer.render(scene, camera);
-}
+            const hrs = Math.floor(state.time);
+            const mins = Math.floor((state.time - hrs) * 60);
+            document.getElementById('displayTime').innerText = `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+        }
 
-function onResize() {
-  const c = document.getElementById('c');
-  const W = c.clientWidth, H2 = c.clientHeight;
-  renderer.setSize(W, H2, false);
-  camera.aspect = W/H2;
-  camera.updateProjectionMatrix();
-}
+        // Disable LIVE mode if user manually overrides time/date
+        function disableLiveMode() {
+            if (state.isLive) {
+                state.isLive = false;
+                document.getElementById('liveIndicator').classList.remove('animate-pulse', 'opacity-100');
+                document.getElementById('liveIndicator').classList.add('opacity-30');
+                document.getElementById('liveBtn').classList.remove('border-red-500', 'shadow-lg', 'shadow-red-500/20');
+            }
+        }
 
-window.addEventListener('load', init);
-</script>
+        // Apply real world local time to simulator
+        function syncLiveTime() {
+            const now = new Date();
+            state.date = now;
+            document.getElementById('dateInput').valueAsDate = now;
+            
+            // Convert Hours, Mins, Secs to a decimal float for the slider
+            state.time = now.getHours() + (now.getMinutes() / 60) + (now.getSeconds() / 3600);
+            document.getElementById('timeSlider').value = state.time;
+            
+            updateAstronomy();
+        }
+
+        function setupEventListeners() {
+            document.getElementById('timeSlider').addEventListener('input', (e) => {
+                state.time = parseFloat(e.target.value);
+                state.isPlaying = false;
+                disableLiveMode();
+                document.getElementById('playPauseBtn').innerHTML = "▶ PLAY DAY";
+                updateAstronomy();
+            });
+
+            document.getElementById('dateInput').addEventListener('change', (e) => {
+                if(e.target.value) {
+                    state.date = new Date(e.target.value);
+                    disableLiveMode();
+                    updateAstronomy();
+                }
+            });
+
+            document.getElementById('playPauseBtn').addEventListener('click', (e) => {
+                disableLiveMode();
+                state.isPlaying = !state.isPlaying;
+                e.target.innerHTML = state.isPlaying ? "⏸ PAUSE" : "▶ PLAY DAY";
+                if(state.isPlaying) {
+                    e.target.classList.replace('bg-gray-800', 'bg-orange-600');
+                    e.target.classList.add('shadow-lg', 'shadow-orange-500/20');
+                } else {
+                    e.target.classList.replace('bg-orange-600', 'bg-gray-800');
+                    e.target.classList.remove('shadow-lg', 'shadow-orange-500/20');
+                }
+            });
+
+            // Live Button Logic
+            document.getElementById('liveBtn').addEventListener('click', (e) => {
+                state.isLive = !state.isLive;
+                
+                if(state.isLive) {
+                    // Turn off play day
+                    state.isPlaying = false;
+                    document.getElementById('playPauseBtn').innerHTML = "▶ PLAY DAY";
+                    document.getElementById('playPauseBtn').classList.replace('bg-orange-600', 'bg-gray-800');
+                    document.getElementById('playPauseBtn').classList.remove('shadow-lg', 'shadow-orange-500/20');
+
+                    // Activate Live UI
+                    document.getElementById('liveIndicator').classList.remove('opacity-30');
+                    document.getElementById('liveIndicator').classList.add('animate-pulse', 'opacity-100');
+                    document.getElementById('liveBtn').classList.add('border-red-500', 'shadow-lg', 'shadow-red-500/20');
+                    
+                    syncLiveTime();
+                } else {
+                    disableLiveMode();
+                }
+            });
+
+            document.getElementById('presetLocation').addEventListener('change', (e) => {
+                const [lat, lng] = e.target.value.split(',').map(Number);
+                state.lat = lat; state.lng = lng;
+                document.getElementById('statusBarLoc').innerText = `${lat.toFixed(2)}°N, ${lng.toFixed(2)}°E`;
+                updateAstronomy();
+            });
+
+            document.getElementById('toggleAutoSwitch').addEventListener('change', (e) => {
+                state.autoToggle = e.target.checked;
+                updateAstronomy();
+            });
+            
+            document.getElementById('toggleShadowRay').addEventListener('change', (e) => {
+                const checked = e.target.checked;
+                shadowRayPrimary.visible = checked && sunSphere.visible;
+                shadowRayComp.visible = checked && sunSphere.visible;
+            });
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Handle Timing Modes
+            if (state.isLive) {
+                syncLiveTime();
+            } else if (state.isPlaying) {
+                state.time += state.simSpeed;
+                if (state.time >= 24) {
+                    state.time = 0;
+                    state.date.setDate(state.date.getDate() + 1);
+                    document.getElementById('dateInput').valueAsDate = state.date;
+                }
+                document.getElementById('timeSlider').value = state.time;
+                updateAstronomy();
+            }
+
+            // Smoothly pan camera target between the two instruments
+            controls.target.x += (state.targetLookAtX - controls.target.x) * 0.05;
+            controls.update();
+
+            renderer.render(scene, camera);
+        }
+    </script>
 </body>
 </html>
