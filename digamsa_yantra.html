@@ -3,675 +3,418 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digamsa Yantra Interactive 3D</title>
+    <title>Digamsa Yantra - True Astronomical Simulation</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #0f172a; font-family: 'Inter', sans-serif; }
-        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
         
-        /* Custom range slider styling */
-        input[type=range] {
-            -webkit-appearance: none;
-            width: 100%;
-            background: transparent;
+        /* Right Side Panel */
+        .right-panel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 400px;
+            height: 100vh;
+            max-width: 100vw;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            box-shadow: -5px 0 30px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+            transition: transform 0.3s ease;
         }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 16px;
-            width: 16px;
-            border-radius: 50%;
-            background: #fbbf24;
-            cursor: pointer;
-            margin-top: -6px;
-            box-shadow: 0 0 5px rgba(251, 191, 36, 0.5);
-        }
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%;
-            height: 4px;
-            cursor: pointer;
-            background: #475569;
-            border-radius: 2px;
-        }
-        input[type=range]:focus { outline: none; }
+
+        .panel-header { background: #1e293b; color: white; padding: 16px; text-align: center; }
         
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(251, 191, 36, 0.2);
+        .tabs { display: flex; background: #f1f5f9; border-bottom: 1px solid #cbd5e1; }
+        .tab-btn { flex: 1; padding: 10px 5px; font-size: 0.85rem; font-weight: 600; color: #475569; border: none; background: none; cursor: pointer; transition: 0.2s; }
+        .tab-btn.active { background: white; color: #0f172a; border-bottom: 2px solid #ef4444; }
+        
+        .tab-content { padding: 20px; overflow-y: auto; flex: 1; display: none; }
+        .tab-content.active { display: block; }
+
+        .control-group { background: #f8fafc; border-radius: 8px; padding: 12px; margin-bottom: 12px; border: 1px solid #e2e8f0; }
+        .control-group label { display: block; font-size: 0.8rem; font-weight: 600; color: #334155; margin-bottom: 4px; }
+        .control-group input, .control-group select { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.9rem; margin-bottom: 8px; }
+        
+        .btn { display: block; width: 100%; padding: 10px; background: #ef4444; color: white; text-align: center; border-radius: 6px; font-weight: bold; cursor: pointer; border: none; margin-top: 8px; transition: background 0.2s; }
+        .btn:hover { background: #dc2626; }
+        .btn-outline { background: transparent; color: #ef4444; border: 1px solid #ef4444; }
+        .btn-outline:hover { background: #fef2f2; }
+
+        .reading-box { background: #1e293b; color: #10b981; padding: 12px; border-radius: 8px; text-align: center; font-family: monospace; font-size: 1.5rem; margin-top: 10px; }
+
+        @media (max-width: 768px) {
+            .right-panel { width: 100vw; height: 50vh; top: auto; bottom: 0; box-shadow: 0 -5px 30px rgba(0,0,0,0.2); }
+            #canvas-container { height: 50vh; }
         }
     </style>
 </head>
-<body class="text-slate-200 select-none">
+<body>
 
-    <!-- 3D Canvas -->
     <div id="canvas-container"></div>
 
-    <!-- UI Overlay -->
-    <div class="absolute inset-0 pointer-events-none flex flex-col justify-between p-4 sm:p-6 h-full">
-        
-        <!-- Header & Stats -->
-        <div class="flex flex-col md:flex-row justify-between items-start gap-4">
+    <div class="right-panel">
+        <div class="panel-header">
+            <h1 class="text-xl font-bold">Digamsa Yantra</h1>
+            <p class="text-xs text-slate-300">Live Astronomical Simulation</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="openTab('sim')">Control</button>
+            <button class="tab-btn" onclick="openTab('about')">About</button>
+            <button class="tab-btn" onclick="openTab('math')">Math</button>
+            <button class="tab-btn" onclick="openTab('design')">Design</button>
+        </div>
+
+        <div id="sim" class="tab-content active">
             
-            <!-- Info Panel -->
-            <div class="glass-panel rounded-xl p-4 sm:p-5 max-w-sm pointer-events-auto shadow-lg shadow-black/50">
-                <h1 class="text-2xl font-bold text-amber-400 tracking-wide mb-1" style="font-family: Georgia, serif;">DIGAMSA YANTRA</h1>
-                <p class="text-xs text-amber-200/70 tracking-widest uppercase mb-3 font-semibold">Jantar Mantar • Jaipur • Est. 1734</p>
-                <p class="text-sm text-slate-300 leading-relaxed mb-3">
-                    An advanced azimuth-measuring instrument. A string is stretched from the central pillar, aligned with the Sun (or a star), and read against the outer circular marble scale to find its exact compass direction.
-                </p>
-                <div class="text-xs text-slate-400 bg-slate-800/50 p-2 rounded-lg border border-slate-700">
-                    <span class="text-amber-400 font-bold">Visual Guide:</span> The bright <span class="text-yellow-400 font-bold">yellow line</span> represents the observer's string pointing towards the Sun, marking the Azimuth angle on the scale.
+            <div class="control-group">
+                <label>Observer Location</label>
+                <select id="observatorySelect" onchange="updateLocationFromPreset()">
+                    <option value="custom">Custom / Live Location</option>
+                    <option value="26.92,75.82" selected>Jaipur Jantar Mantar</option>
+                    <option value="23.17,75.76">Ujjain Jantar Mantar</option>
+                    <option value="28.62,77.20">Delhi Jantar Mantar</option>
+                    <option value="25.31,83.00">Varanasi Jantar Mantar</option>
+                </select>
+                <div class="flex gap-2">
+                    <input type="number" id="latInput" step="0.01" placeholder="Lat" value="26.92">
+                    <input type="number" id="lngInput" step="0.01" placeholder="Lng" value="75.82">
                 </div>
+                <button class="btn btn-outline text-sm" onclick="getLiveLocation()">📍 Use My Live Location</button>
             </div>
 
-            <!-- Live Telemetry Panel -->
-            <div class="glass-panel rounded-xl p-4 min-w-[220px] pointer-events-auto shadow-lg">
-                <div class="text-center border-b border-slate-700/50 pb-3 mb-3">
-                    <div id="ui-time" class="text-3xl font-bold text-amber-400" style="font-family: Georgia, serif;">12:00 PM</div>
-                    <div id="ui-status" class="text-xs text-amber-200/60 uppercase tracking-widest mt-1">Sun Active</div>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="bg-slate-800/60 p-2 rounded block text-center border border-slate-700/50">
-                        <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Azimuth</div>
-                        <div id="ui-az" class="text-lg font-mono text-amber-300 font-semibold">180.0°</div>
-                    </div>
-                    <div class="bg-slate-800/60 p-2 rounded block text-center border border-slate-700/50">
-                        <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Altitude</div>
-                        <div id="ui-alt" class="text-lg font-mono text-amber-300 font-semibold">45.0°</div>
-                    </div>
-                    <div class="bg-slate-800/60 p-2 rounded block text-center border border-slate-700/50">
-                        <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Hour Angle</div>
-                        <div id="ui-ha" class="text-lg font-mono text-slate-200">0.0°</div>
-                    </div>
-                    <div class="bg-slate-800/60 p-2 rounded block text-center border border-slate-700/50">
-                        <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Declination</div>
-                        <div id="ui-dec" class="text-lg font-mono text-slate-200">0.0°</div>
-                    </div>
-                </div>
+            <div class="control-group">
+                <label>Date & Time</label>
+                <input type="date" id="dateInput">
+                <input type="time" id="timeInput">
+                <button class="btn" id="animateDayBtn" onclick="toggleDayAnimation()">▶ Animate Full Day Loop</button>
+            </div>
+
+            <div class="control-group">
+                <label>Current Sun Azimuth Reading</label>
+                <div class="reading-box" id="azimuthReading">0.00°</div>
+                <p class="text-xs text-slate-500 mt-2 text-center">Virtual observer moves to this angle.</p>
             </div>
         </div>
 
-        <!-- Controls (Bottom) -->
-        <div class="glass-panel rounded-xl p-4 sm:p-5 pointer-events-auto shadow-lg max-w-3xl mx-auto w-full">
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                <!-- Time Slider -->
-                <div>
-                    <div class="flex justify-between text-xs text-amber-200/70 uppercase tracking-wider font-semibold mb-2">
-                        <span>Sunrise (6 AM)</span>
-                        <span class="text-amber-400">Time of Day</span>
-                        <span>Sunset (6 PM)</span>
-                    </div>
-                    <input type="range" id="timeSlider" min="6" max="18" step="0.05" value="10">
-                </div>
-                
-                <!-- Season Slider -->
-                <div>
-                    <div class="flex justify-between text-xs text-amber-200/70 uppercase tracking-wider font-semibold mb-2">
-                        <span>Winter Solstice</span>
-                        <span class="text-amber-400">Season (Declination)</span>
-                        <span>Summer Solstice</span>
-                    </div>
-                    <input type="range" id="seasonSlider" min="-23.5" max="23.5" step="0.1" value="0">
-                </div>
-            </div>
+        <div id="about" class="tab-content">
+            <h3 class="font-bold text-slate-800 mb-2">The Digamsa Yantra</h3>
+            <p class="text-sm text-slate-600 mb-2">Built in the early 18th century by Maharaja Sawai Jai Singh II, this instrument calculates the <strong>Azimuth</strong> (horizontal angle) of the sun and stars.</p>
+            <p class="text-sm text-slate-600">The astronomer walks in the space between the inner and outer walls, aligning a thread from the central cross-wires to the celestial body, reading the angle on the graduated circular walls.</p>
+        </div>
 
-            <!-- Action Buttons -->
-            <div class="flex flex-wrap gap-2 justify-center pt-3 border-t border-slate-700/50">
-                <button id="btn-anim" class="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/50 rounded-lg text-xs font-bold tracking-wider uppercase transition-colors mr-2">
-                    ▶ Auto-Play Day
-                </button>
-                <button class="cam-btn px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 rounded-lg text-xs font-bold tracking-wider uppercase transition-colors" data-view="isometric">Isometric</button>
-                <button class="cam-btn px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 rounded-lg text-xs font-bold tracking-wider uppercase transition-colors" data-view="observer">Observer</button>
-                <button class="cam-btn px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 rounded-lg text-xs font-bold tracking-wider uppercase transition-colors" data-view="top">Top Down</button>
-            </div>
-            
-            <div class="text-center mt-3 text-[10px] text-slate-500 uppercase tracking-widest">
-                Drag to rotate • Scroll to zoom • Right-click to pan
-            </div>
+        <div id="math" class="tab-content">
+            <h3 class="font-bold text-slate-800 mb-2">Astronomical Principles</h3>
+            <p class="text-sm text-slate-600 mb-2">The simulation uses standard solar position equations:</p>
+            <ul class="text-xs text-slate-600 list-disc pl-4 space-y-1">
+                <li>Calculates Day of Year (N)</li>
+                <li>Derives Solar Declination ($\delta$)</li>
+                <li>Calculates Local Hour Angle (H) based on Longitude and Time</li>
+                <li>Derives Solar Altitude ($\alpha$) and Azimuth (A) using spherical trigonometry based on observer Latitude.</li>
+            </ul>
+        </div>
+
+        <div id="design" class="tab-content">
+            <h3 class="font-bold text-slate-800 mb-2">Structural Accuracy</h3>
+            <ul class="text-xs text-slate-600 list-disc pl-4 space-y-2">
+                <li><strong>Central Pillar:</strong> Holds the center node.</li>
+                <li><strong>Inner Wall:</strong> Matching height to pillar.</li>
+                <li><strong>Outer Wall:</strong> Taller, anchors the North-South and East-West crosswires.</li>
+                <li><strong>Entrances:</strong> 4 cardinal cutouts allowing the observer to enter.</li>
+                <li><strong>Virtual Observer:</strong> The blue figure aligns the measurement thread.</li>
+            </ul>
         </div>
     </div>
 
-    <!-- Three.js Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-
     <script>
-        // --- CONSTANTS & SETTINGS ---
-        const LATITUDE = 26.92 * Math.PI / 180; // Jaipur Latitude
-        const H = 4;        // Base unit height (Pillar and Inner Wall)
-        const H2 = 8;       // Outer Wall height (Double)
-        const R_PILLAR = 0.5;
-        const R_INNER = 4.5;
-        const R_OUTER = 9.0;
-        const WALL_THICKNESS = 0.8;
-        
-        // State
-        let state = {
-            time: 10,       // 6 to 18 hours
-            declination: 0, // -23.5 to 23.5 degrees
-            isAnimating: false,
-            azimuthRad: 0,
-            altitudeRad: 0
-        };
+        // --- UI Logic ---
+        function openTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
 
-        // --- SCENE SETUP ---
+        // Initialize Date/Time UI
+        const now = new Date();
+        document.getElementById('dateInput').valueAsDate = now;
+        document.getElementById('timeInput').value = now.toTimeString().slice(0,5);
+
+        // --- 3D SCENE SETUP ---
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1e293b);
-        scene.fog = new THREE.FogExp2(0x1e293b, 0.015);
-
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 500);
+        scene.background = new THREE.Color(0x87ceeb); // Sky blue
+        
+        // Adjust camera to account for right panel
+        const aspect = (window.innerWidth - (window.innerWidth > 768 ? 400 : 0)) / window.innerHeight;
+        const camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
         camera.position.set(15, 12, 15);
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth - (window.innerWidth > 768 ? 400 : 0), window.innerHeight - (window.innerWidth <= 768 ? window.innerHeight/2 : 0));
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         container.appendChild(renderer.domElement);
 
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        controls.maxPolarAngle = Math.PI / 2 - 0.05; // Prevent going below ground
-        controls.minDistance = 2;
-        controls.maxDistance = 40;
-        controls.target.set(0, H/2, 0);
+        controls.maxPolarAngle = Math.PI / 2 - 0.05;
+        controls.target.set(0, 1.5, 0);
 
-        // --- LIGHTING ---
-        const ambientLight = new THREE.AmbientLight(0xfff0dd, 0.4);
+        // Lighting (Dynamic Sun)
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
         scene.add(ambientLight);
 
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.4);
-        hemiLight.position.set(0, 20, 0);
-        scene.add(hemiLight);
-
-        const sunLight = new THREE.DirectionalLight(0xfffaeb, 1.5);
+        const sunLight = new THREE.DirectionalLight(0xffffee, 1.2);
         sunLight.castShadow = true;
         sunLight.shadow.mapSize.width = 2048;
         sunLight.shadow.mapSize.height = 2048;
         sunLight.shadow.camera.near = 0.5;
         sunLight.shadow.camera.far = 100;
-        const d = 15;
-        sunLight.shadow.camera.left = -d;
-        sunLight.shadow.camera.right = d;
-        sunLight.shadow.camera.top = d;
-        sunLight.shadow.camera.bottom = -d;
-        sunLight.shadow.bias = -0.001;
+        sunLight.shadow.camera.left = -15;
+        sunLight.shadow.camera.right = 15;
+        sunLight.shadow.camera.top = 15;
+        sunLight.shadow.camera.bottom = -15;
         scene.add(sunLight);
 
-        // --- MATERIALS ---
-        const texLoader = new THREE.TextureLoader();
-        
-        // Custom colours matching Jantar Mantar
-        const cSandstone = 0xd97742; // Terracotta/Reddish
-        const cPlaster = 0xe6c875;   // Mustard Yellow
-        const cMarble = 0xf8f9fa;    // White Marble
-        const cGround = 0x334155;    // Slate base
-
-        const matPlaster = new THREE.MeshStandardMaterial({ color: cPlaster, roughness: 0.9, metalness: 0.1 });
-        const matSandstone = new THREE.MeshStandardMaterial({ color: cSandstone, roughness: 0.8, metalness: 0.1 });
-        const matMarble = new THREE.MeshStandardMaterial({ color: cMarble, roughness: 0.4, metalness: 0.0 });
-        const matWire = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.5, metalness: 0.8 });
-        
-        // Dynamic Objects Materials
-        const matString = new THREE.MeshBasicMaterial({ color: 0xfde047 }); // Bright Yellow
-        const matMarker = new THREE.MeshBasicMaterial({ color: 0xef4444 }); // Bright Red
-        const matSun = new THREE.MeshBasicMaterial({ color: 0xffedd5 });
-
-        // --- TEXTURE GENERATION FOR SCALES ---
-        function createScaleTexture(radius, isTopDisc = false) {
-            const canvas = document.createElement('canvas');
-            canvas.width = 2048;
-            canvas.height = isTopDisc ? 2048 : 128;
-            const ctx = canvas.getContext('2d');
-
-            ctx.fillStyle = '#f8f9fa';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            if (isTopDisc) {
-                // Generate a circular top-down scale for the central pillar
-                const cx = canvas.width / 2;
-                const cy = canvas.height / 2;
-                const rOuter = canvas.width / 2 - 10;
-                
-                ctx.strokeStyle = '#000';
-                ctx.lineWidth = 4;
-                ctx.beginPath(); ctx.arc(cx, cy, rOuter, 0, Math.PI * 2); ctx.stroke();
-                
-                for(let i = 0; i < 360; i++) {
-                    const angle = (i - 90) * Math.PI / 180;
-                    const isMajor = i % 10 === 0;
-                    const isMedium = i % 5 === 0;
-                    const len = isMajor ? 60 : (isMedium ? 40 : 20);
-                    
-                    ctx.lineWidth = isMajor ? 4 : (isMedium ? 2 : 1);
-                    ctx.beginPath();
-                    ctx.moveTo(cx + Math.cos(angle) * (rOuter - len), cy + Math.sin(angle) * (rOuter - len));
-                    ctx.lineTo(cx + Math.cos(angle) * rOuter, cy + Math.sin(angle) * rOuter);
-                    ctx.stroke();
-
-                    if(isMajor) {
-                        ctx.fillStyle = '#000';
-                        ctx.font = 'bold 36px Georgia';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        const tRad = rOuter - 90;
-                        ctx.fillText(i.toString(), cx + Math.cos(angle) * tRad, cy + Math.sin(angle) * tRad);
-                    }
-                }
-            } else {
-                // Generate a linear repeating scale for torus (wrapped around)
-                const w = canvas.width;
-                const h = canvas.height;
-                
-                for(let i = 0; i < 360; i++) {
-                    const x = (i / 360) * w;
-                    const isMajor = i % 10 === 0;
-                    const isMedium = i % 5 === 0;
-                    
-                    ctx.fillStyle = '#000';
-                    ctx.fillRect(x - (isMajor?2:1), h - (isMajor?60:(isMedium?40:20)), isMajor?4:2, 60);
-                    
-                    if (isMajor) {
-                        ctx.font = 'bold 24px Georgia';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(i.toString(), x, h - 70);
-                    }
-                }
-                
-                // Add cardinal directions
-                ctx.font = 'bold 48px Georgia';
-                ctx.fillStyle = '#b91c1c'; // Red for cardinals
-                ctx.fillText("N", 0, 45); ctx.fillText("N", w, 45); // Wraps
-                ctx.fillText("E", w * 0.25, 45);
-                ctx.fillText("S", w * 0.5, 45);
-                ctx.fillText("W", w * 0.75, 45);
-            }
-
-            const tex = new THREE.CanvasTexture(canvas);
-            if(!isTopDisc) tex.wrapS = THREE.RepeatWrapping;
-            return tex;
-        }
-
-        const texScaleLinear = createScaleTexture(R_OUTER, false);
-        const texScaleDisc = createScaleTexture(R_PILLAR, true);
-        const matScaleLinear = new THREE.MeshStandardMaterial({ map: texScaleLinear, roughness: 0.5 });
-        const matScaleDisc = new THREE.MeshStandardMaterial({ map: texScaleDisc, roughness: 0.5 });
-
-        // --- BUILDING THE YANTRA ---
-        const yantraGroup = new THREE.Group();
-        scene.add(yantraGroup);
-
-        // 1. Ground Platform
-        const groundGeo = new THREE.CylinderGeometry(R_OUTER + 4, R_OUTER + 4, 0.5, 32);
-        const ground = new THREE.Mesh(groundGeo, new THREE.MeshStandardMaterial({color: cGround, roughness: 0.9}));
-        ground.position.y = -0.25;
+        // Ground
+        const grid = new THREE.GridHelper(50, 50, 0x000000, 0x000000);
+        grid.material.opacity = 0.1; grid.material.transparent = true;
+        scene.add(grid);
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshStandardMaterial({ color: 0xe0eac7 }));
+        ground.rotation.x = -Math.PI / 2;
         ground.receiveShadow = true;
-        yantraGroup.add(ground);
+        scene.add(ground);
 
-        // 2. Central Pillar
-        const pillarGeo = new THREE.CylinderGeometry(R_PILLAR, R_PILLAR*1.1, H, 32);
-        const pillar = new THREE.Mesh(pillarGeo, matPlaster);
-        pillar.position.y = H/2;
-        pillar.castShadow = true;
-        pillar.receiveShadow = true;
+        // --- YANTRA CONSTRUCTION ---
+        const yantraGroup = new THREE.Group();
+        const stoneMat = new THREE.MeshStandardMaterial({ color: 0xc4625b });
+        const scaleMat = new THREE.MeshStandardMaterial({ color: 0xf8f9fa });
+        const wireMat = new THREE.LineBasicMaterial({ color: 0x222222, linewidth: 2 });
+        const threadMat = new THREE.LineBasicMaterial({ color: 0xeab308 });
+
+        // Pillar
+        const pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 1.5, 32), stoneMat);
+        pillar.position.y = 0.75; pillar.castShadow = true; pillar.receiveShadow = true;
         yantraGroup.add(pillar);
         
-        // Pillar Top Disc (Scale)
-        const pDiscGeo = new THREE.CylinderGeometry(R_PILLAR*1.05, R_PILLAR*1.05, 0.1, 32);
-        const pDisc = new THREE.Mesh(pDiscGeo, matScaleDisc);
-        pDisc.position.y = H + 0.05;
-        pDisc.rotation.y = -Math.PI / 2; // Align 0 with North (-Z)
-        yantraGroup.add(pDisc);
-
-        // Center Peg (Origin for string)
-        const peg = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.2, 8), matWire);
-        peg.position.y = H + 0.2;
-        yantraGroup.add(peg);
-
-        // 3. Inner Wall (Height H)
-        function createWall(radius, height, segments, hasArches) {
+        // Wall Generator
+        function createBrokenWall(innerR, outerR, height, gapDeg) {
             const group = new THREE.Group();
-            
-            if (hasArches) {
-                // Build wall with gaps for arches
-                const numArches = 4;
-                const archWidth = Math.PI / 8; // angle
-                
-                for(let i=0; i<numArches; i++) {
-                    const startAngle = (i * Math.PI / 2) + archWidth;
-                    const endAngle = ((i+1) * Math.PI / 2) - archWidth;
-                    
-                    // Solid wall segment between arches
-                    const shape = new THREE.Shape();
-                    shape.absarc(0, 0, radius + WALL_THICKNESS/2, startAngle, endAngle, false);
-                    shape.absarc(0, 0, radius - WALL_THICKNESS/2, endAngle, startAngle, true);
-                    
-                    const extrudeSettings = { depth: height, bevelEnabled: false, curveSegments: 32 };
-                    const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-                    const mesh = new THREE.Mesh(geo, matPlaster);
-                    mesh.rotation.x = Math.PI / 2; // lay flat
-                    mesh.position.y = height;      // lift up
-                    mesh.castShadow = true;
-                    mesh.receiveShadow = true;
-                    group.add(mesh);
-                    
-                    // Add archway bridge over the gap
-                    const archBridgeShape = new THREE.Shape();
-                    archBridgeShape.absarc(0, 0, radius + WALL_THICKNESS/2, endAngle, startAngle + Math.PI/2, false);
-                    archBridgeShape.absarc(0, 0, radius - WALL_THICKNESS/2, startAngle + Math.PI/2, endAngle, true);
-                    const bridgeSettings = { depth: height * 0.4, bevelEnabled: false, curveSegments: 16 };
-                    const bridgeGeo = new THREE.ExtrudeGeometry(archBridgeShape, bridgeSettings);
-                    const bridge = new THREE.Mesh(bridgeGeo, matPlaster);
-                    bridge.rotation.x = Math.PI / 2;
-                    bridge.position.y = height; 
-                    bridge.castShadow = true;
-                    bridge.receiveShadow = true;
-                    group.add(bridge);
-                }
-            } else {
-                // Solid unbroken wall (Inner wall has entrances usually, but simplifying here for clarity of inner structure, adding one doorway)
+            const gapRad = gapDeg * Math.PI / 180;
+            const segmentRad = (Math.PI / 2) - gapRad;
+            for (let i = 0; i < 4; i++) {
+                const startAngle = i * (Math.PI / 2) + gapRad / 2;
                 const shape = new THREE.Shape();
-                shape.absarc(0, 0, radius + WALL_THICKNESS/2, 0.2, Math.PI*2 - 0.2, false);
-                shape.absarc(0, 0, radius - WALL_THICKNESS/2, Math.PI*2 - 0.2, 0.2, true);
-                const extrudeSettings = { depth: height, bevelEnabled: false, curveSegments: 64 };
-                const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-                const mesh = new THREE.Mesh(geo, matPlaster);
-                mesh.rotation.x = Math.PI / 2;
-                mesh.position.y = height;
-                mesh.castShadow = true;
-                mesh.receiveShadow = true;
+                shape.absarc(0, 0, outerR, startAngle, startAngle + segmentRad, false);
+                shape.lineTo(innerR * Math.cos(startAngle + segmentRad), innerR * Math.sin(startAngle + segmentRad));
+                shape.absarc(0, 0, innerR, startAngle + segmentRad, startAngle, true);
+                
+                const geo = new THREE.ExtrudeGeometry(shape, { depth: height, bevelEnabled: false, curveSegments: 32 });
+                geo.rotateX(Math.PI / 2); geo.translate(0, height, 0);
+                const mesh = new THREE.Mesh(geo, stoneMat);
+                mesh.castShadow = true; mesh.receiveShadow = true;
                 group.add(mesh);
+
+                const topGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.05, bevelEnabled: false });
+                topGeo.rotateX(Math.PI / 2); topGeo.translate(0, height + 0.05, 0);
+                const topMesh = new THREE.Mesh(topGeo, scaleMat);
+                topMesh.receiveShadow = true;
+                group.add(topMesh);
             }
-
-            // Top Marble Scale Ring
-            const ringShape = new THREE.Shape();
-            ringShape.absarc(0, 0, radius + WALL_THICKNESS/2 + 0.1, 0, Math.PI*2, false);
-            ringShape.absarc(0, 0, radius - WALL_THICKNESS/2 - 0.1, Math.PI*2, 0, true);
-            const ringGeo = new THREE.ExtrudeGeometry(ringShape, { depth: 0.15, bevelEnabled: false, curveSegments: 64 });
-            
-            // Map the UVs circularly for the linear texture to wrap correctly
-            const pos = ringGeo.attributes.position;
-            const uvs = new Float32Array(pos.count * 2);
-            for(let i=0; i<pos.count; i++) {
-                const x = pos.getX(i);
-                const y = pos.getY(i);
-                let angle = Math.atan2(y, x); // -PI to PI
-                if(angle < 0) angle += Math.PI * 2;
-                // Offset by PI/2 so 0 aligns with North (-Z in ThreeJS)
-                let u = (angle + Math.PI/2) / (Math.PI * 2);
-                if(u > 1) u -= 1;
-                uvs[i*2] = 1 - u; // Flip for correct CW reading
-                uvs[i*2+1] = pos.getZ(i) > 0.05 ? 1 : 0; // Top/bottom face
-            }
-            ringGeo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-
-            const topRing = new THREE.Mesh(ringGeo, matScaleLinear);
-            topRing.rotation.x = Math.PI / 2;
-            topRing.position.y = height + 0.15;
-            topRing.receiveShadow = true;
-            group.add(topRing);
-
             return group;
         }
 
-        yantraGroup.add(createWall(R_INNER, H, 64, false));
-        yantraGroup.add(createWall(R_OUTER, H2, 64, true)); // Double height outer wall
+        yantraGroup.add(createBrokenWall(2.5, 3.2, 1.5, 12)); // Inner
+        yantraGroup.add(createBrokenWall(5.5, 6.2, 3.0, 8));  // Outer
 
-        // Cross-wires on Outer Wall
-        const wireGeo = new THREE.CylinderGeometry(0.02, 0.02, R_OUTER * 2.2, 8);
-        const wireNS = new THREE.Mesh(wireGeo, matWire);
-        wireNS.position.y = H2 + 0.3;
-        wireNS.rotation.x = Math.PI / 2; // North-South
-        yantraGroup.add(wireNS);
-
-        const wireEW = new THREE.Mesh(wireGeo, matWire);
-        wireEW.position.y = H2 + 0.3;
-        wireEW.rotation.z = Math.PI / 2; // East-West
-        yantraGroup.add(wireEW);
-
-        // --- DYNAMIC ELEMENTS (String, Sun, Markers) ---
-        const sunSphere = new THREE.Mesh(new THREE.SphereGeometry(1.5, 16, 16), matSun);
+        // Crosswires
+        const wireH = 3.08;
+        yantraGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-6.2, wireH, 0), new THREE.Vector3(6.2, wireH, 0)]), wireMat));
+        yantraGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, wireH, -6.2), new THREE.Vector3(0, wireH, 6.2)]), wireMat));
         
-        // Sun glow effect
-        const sunGlow = new THREE.Mesh(
-            new THREE.SphereGeometry(2.5, 16, 16), 
-            new THREE.MeshBasicMaterial({ color: 0xfde047, transparent: true, opacity: 0.3, side: THREE.BackSide })
-        );
-        sunSphere.add(sunGlow);
-        scene.add(sunSphere);
+        // Virtual Observer
+        const observerGroup = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.2, 16), new THREE.MeshStandardMaterial({color: 0x3b82f6}));
+        body.position.y = 0.6; body.castShadow = true;
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), new THREE.MeshStandardMaterial({color: 0xfca5a5}));
+        head.position.y = 1.4; head.castShadow = true;
+        observerGroup.add(body); observerGroup.add(head);
+        yantraGroup.add(observerGroup);
 
-        // The observation string (from pillar to outer wall)
-        // Actually, the string goes from the center pillar, over the inner wall, to the outer wall.
-        const stringGeo = new THREE.CylinderGeometry(0.04, 0.04, 1, 8);
-        stringGeo.translate(0, 0.5, 0); // Pivot at base
-        const observerString = new THREE.Mesh(stringGeo, matString);
-        yantraGroup.add(observerString);
+        // Thread
+        const threadGeo = new THREE.BufferGeometry();
+        const threadPositions = new Float32Array(2 * 3); // Center to Observer
+        threadGeo.setAttribute('position', new THREE.BufferAttribute(threadPositions, 3));
+        const threadLine = new THREE.Line(threadGeo, threadMat);
+        yantraGroup.add(threadLine);
 
-        // Plumb bob / Weight at the end of string
-        const plumbBob = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.4, 8), matMarker);
-        plumbBob.rotation.x = Math.PI; // point down
-        yantraGroup.add(plumbBob);
+        scene.add(yantraGroup);
 
-        // Readout Marker on the scale
-        const readMarker = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.3, 0.6), matMarker);
-        yantraGroup.add(readMarker);
+        // --- ASTRONOMY MATH ENGINE ---
+        function calculateSunPosition(date, lat, lng) {
+            // Simplified Solar Position Algorithm
+            const start = new Date(date.getFullYear(), 0, 0);
+            const diff = date - start;
+            const oneDay = 1000 * 60 * 60 * 24;
+            const dayOfYear = Math.floor(diff / oneDay);
 
-        // Line of sight to Sun (Dashed line)
-        const lineMat = new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 0.5, gapSize: 0.2, opacity: 0.5, transparent: true });
-        const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0,10,0)]);
-        const lineOfSight = new THREE.Line(lineGeo, lineMat);
-        yantraGroup.add(lineOfSight);
+            const b = (2 * Math.PI / 365) * (dayOfYear - 81);
+            const equationOfTime = 9.87 * Math.sin(2 * b) - 7.53 * Math.cos(b) - 1.5 * Math.sin(b);
 
+            const lst = date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600;
+            const solarTime = lst + (lng / 15) - (date.getTimezoneOffset() / 60) + (equationOfTime / 60);
+            
+            let hourAngle = 15 * (solarTime - 12);
+            const declination = 23.45 * Math.sin((360 / 365) * (dayOfYear - 81) * Math.PI / 180);
 
-        // --- ASTRONOMY MATH & UPDATE LOGIC ---
-        
-        function updateAstronomy() {
-            // Calculate Hour Angle (-PI to PI)
-            // Solar noon is 12:00, ha = 0.
-            const ha = (state.time - 12) * 15 * Math.PI / 180;
-            const dec = state.declination * Math.PI / 180;
+            const latRad = lat * Math.PI / 180;
+            const decRad = declination * Math.PI / 180;
+            const haRad = hourAngle * Math.PI / 180;
 
             // Altitude
-            const sinAlt = Math.sin(LATITUDE) * Math.sin(dec) + Math.cos(LATITUDE) * Math.cos(dec) * Math.cos(ha);
-            state.altitudeRad = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
+            const sinAlt = Math.sin(latRad) * Math.sin(decRad) + Math.cos(latRad) * Math.cos(decRad) * Math.cos(haRad);
+            const altitude = Math.asin(sinAlt);
 
             // Azimuth
-            // Calculate cos(azimuth) from North. 
-            const cosAz = (Math.sin(dec) - Math.sin(LATITUDE) * Math.sin(state.altitudeRad)) / (Math.cos(LATITUDE) * Math.cos(state.altitudeRad));
-            let az = Math.acos(Math.max(-1, Math.min(1, cosAz)));
+            const cosAz = (Math.sin(decRad) - Math.sin(latRad) * sinAlt) / (Math.cos(latRad) * Math.cos(altitude));
+            let azimuthRad = Math.acos(Math.max(-1, Math.min(1, cosAz)));
             
-            // If hour angle > 0 (afternoon), azimuth is West of North (i.e., > 180 deg)
-            if (ha > 0) {
-                az = 2 * Math.PI - az;
-            }
-            state.azimuthRad = az;
+            if (Math.sin(haRad) > 0) azimuthRad = 2 * Math.PI - azimuthRad;
 
-            update3DScene();
-            updateUI(ha, dec);
+            return {
+                azimuth: azimuthRad * 180 / Math.PI,
+                altitude: altitude * 180 / Math.PI
+            };
         }
 
-        function update3DScene() {
-            const isDay = state.altitudeRad > -0.05; // Slightly below horizon for twilight
-            
-            // Update Sun Position
+        // --- UPDATE LOGIC ---
+        function updateSimulation() {
+            const dateVal = document.getElementById('dateInput').value;
+            const timeVal = document.getElementById('timeInput').value;
+            const lat = parseFloat(document.getElementById('latInput').value);
+            const lng = parseFloat(document.getElementById('lngInput').value);
+
+            if(!dateVal || !timeVal || isNaN(lat) || isNaN(lng)) return;
+
+            const simDate = new Date(`${dateVal}T${timeVal}`);
+            const sunPos = calculateSunPosition(simDate, lat, lng);
+
+            // Update UI
+            document.getElementById('azimuthReading').innerText = sunPos.azimuth.toFixed(2) + '°';
+
+            // Update Sun Light in 3D
+            const azRad = sunPos.azimuth * Math.PI / 180;
+            const altRad = sunPos.altitude * Math.PI / 180;
             const distance = 40;
-            // North is -Z, East is +X, Up is +Y
-            // spherical to Cartesian mapping:
-            // x = R * cos(alt) * sin(az)
-            // y = R * sin(alt)
-            // z = R * cos(alt) * -cos(az)  (since North is -Z)
             
-            const sx = distance * Math.cos(state.altitudeRad) * Math.sin(state.azimuthRad);
-            const sy = distance * Math.sin(state.altitudeRad);
-            const sz = distance * Math.cos(state.altitudeRad) * -Math.cos(state.azimuthRad);
+            // Note: In Three.js, -Z is North, +X is East. 
+            // Azimuth is measured from North (0) towards East (90).
+            const sunX = distance * Math.cos(altRad) * Math.sin(azRad);
+            const sunZ = distance * Math.cos(altRad) * -Math.cos(azRad);
+            const sunY = distance * Math.sin(altRad);
+            sunLight.position.set(sunX, sunY, sunZ);
 
-            sunLight.position.set(sx, Math.max(0, sy), sz); // Light shouldn't go too far below
-            sunSphere.position.set(sx, sy, sz);
-            
-            sunLight.intensity = isDay ? Math.max(0, Math.min(1.5, Math.sin(state.altitudeRad) * 3)) : 0;
-            sunSphere.visible = isDay;
+            // Update Virtual Observer & Thread
+            // Observer stands in the walkway (radius ~4.35)
+            const obsRadius = 4.35;
+            // Observer looks TOWARDS the center to align with the sun behind them, 
+            // or looks AT the sun from the opposite side. Usually, you read the shadow or align visually.
+            // Let's place observer on the exact azimuth angle on the walkway.
+            observerGroup.position.set(
+                Math.sin(azRad) * obsRadius,
+                0,
+                -Math.cos(azRad) * obsRadius
+            );
+            observerGroup.lookAt(0, 1.5, 0); // Look at center
 
-            // Update String and Markers (Only meaningful if Sun is up)
-            if (isDay && state.altitudeRad > 0) {
-                observerString.visible = true;
-                readMarker.visible = true;
-                plumbBob.visible = true;
-                lineOfSight.visible = true;
+            // Thread connects Center Crosswire (0, 3.08, 0) to Observer hands
+            const positions = threadLine.geometry.attributes.position.array;
+            positions[0] = 0; positions[1] = wireH; positions[2] = 0; // Center
+            positions[3] = observerGroup.position.x; positions[4] = 1.2; positions[5] = observerGroup.position.z; // Observer
+            threadLine.geometry.attributes.position.needsUpdate = true;
 
-                // The physical instrument involves string stretching horizontally to the outer wall.
-                // Origin is center peg
-                const origY = H + 0.2;
-                
-                // End point on outer wall scale
-                const ex = (R_OUTER + WALL_THICKNESS/2) * Math.sin(state.azimuthRad);
-                const ez = (R_OUTER + WALL_THICKNESS/2) * -Math.cos(state.azimuthRad);
-                const ey = H2 + 0.2; // Top of outer wall
+            // Dim light if sun is below horizon
+            sunLight.intensity = sunPos.altitude > 0 ? 1.2 : 0.1;
+        }
 
-                // Vector from origin to end point
-                const dx = ex - 0;
-                const dy = ey - origY;
-                const dz = ez - 0;
-                const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+        // --- EVENT LISTENERS ---
+        document.getElementById('dateInput').addEventListener('change', updateSimulation);
+        document.getElementById('timeInput').addEventListener('change', updateSimulation);
+        document.getElementById('latInput').addEventListener('input', updateSimulation);
+        document.getElementById('lngInput').addEventListener('input', updateSimulation);
 
-                // Update String Mesh
-                observerString.position.set(0, origY, 0);
-                // Rotate cylinder to point from origin to end
-                observerString.scale.set(1, dist, 1);
-                // Orientation:
-                const pitch = Math.acos(dy / dist); // Angle from Y axis
-                const yaw = Math.atan2(dx, dz);     // Rotation around Y axis
-                observerString.rotation.set(pitch, yaw, 0, 'YXZ');
-
-                // Read Marker on Outer scale
-                readMarker.position.set(ex, ey + 0.1, ez);
-                readMarker.rotation.y = yaw;
-
-                // Plumb Bob hanging over the edge
-                plumbBob.position.set(ex + Math.sin(state.azimuthRad)*0.2, ey - 0.5, ez + -Math.cos(state.azimuthRad)*0.2);
-
-                // Line of Sight to Sun
-                const losPts = [new THREE.Vector3(0, origY, 0), new THREE.Vector3(sx, sy, sz)];
-                lineOfSight.geometry.setFromPoints(losPts);
-                lineOfSight.computeLineDistances();
-
-            } else {
-                observerString.visible = false;
-                readMarker.visible = false;
-                plumbBob.visible = false;
-                lineOfSight.visible = false;
+        function updateLocationFromPreset() {
+            const val = document.getElementById('observatorySelect').value;
+            if (val !== 'custom') {
+                const [lat, lng] = val.split(',');
+                document.getElementById('latInput').value = lat;
+                document.getElementById('lngInput').value = lng;
+                updateSimulation();
             }
         }
 
-        function formatTime(decimalHours) {
-            const h = Math.floor(decimalHours);
-            const m = Math.floor((decimalHours - h) * 60);
-            const ampm = h >= 12 ? 'PM' : 'AM';
-            let displayH = h % 12;
-            if (displayH === 0) displayH = 12;
-            return `${displayH}:${m.toString().padStart(2, '0')} ${ampm}`;
-        }
-
-        function updateUI(ha, dec) {
-            document.getElementById('ui-time').innerText = formatTime(state.time);
-            document.getElementById('ui-az').innerText = (state.azimuthRad * 180 / Math.PI).toFixed(1) + '°';
-            document.getElementById('ui-alt').innerText = (state.altitudeRad * 180 / Math.PI).toFixed(1) + '°';
-            document.getElementById('ui-ha').innerText = (ha * 180 / Math.PI).toFixed(1) + '°';
-            document.getElementById('ui-dec').innerText = (dec * 180 / Math.PI).toFixed(1) + '°';
-
-            const statusEl = document.getElementById('ui-status');
-            if (state.altitudeRad < 0) {
-                statusEl.innerText = 'Night (Below Horizon)';
-                statusEl.className = 'text-xs font-bold text-slate-500 uppercase tracking-widest mt-1';
+        function getLiveLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    document.getElementById('latInput').value = pos.coords.latitude.toFixed(2);
+                    document.getElementById('lngInput').value = pos.coords.longitude.toFixed(2);
+                    document.getElementById('observatorySelect').value = 'custom';
+                    updateSimulation();
+                }, err => alert("Location access denied or unavailable."));
             } else {
-                statusEl.innerText = 'Active Reading';
-                statusEl.className = 'text-xs font-bold text-amber-400 uppercase tracking-widest mt-1';
+                alert("Geolocation not supported by this browser.");
             }
         }
 
-        // --- INTERACTION LOGIC ---
+        // --- DAY ANIMATION LOOP ---
+        let isAnimatingDay = false;
+        let animSpeed = 5; // minutes per frame
         
-        const tSlider = document.getElementById('timeSlider');
-        const sSlider = document.getElementById('seasonSlider');
-        const btnAnim = document.getElementById('btn-anim');
-
-        tSlider.addEventListener('input', (e) => {
-            state.time = parseFloat(e.target.value);
-            state.isAnimating = false;
-            btnAnim.innerHTML = '▶ Auto-Play Day';
-            btnAnim.classList.replace('bg-amber-600', 'bg-amber-500/20');
-            btnAnim.classList.replace('text-white', 'text-amber-400');
-            updateAstronomy();
-        });
-
-        sSlider.addEventListener('input', (e) => {
-            state.declination = parseFloat(e.target.value);
-            updateAstronomy();
-        });
-
-        btnAnim.addEventListener('click', () => {
-            state.isAnimating = !state.isAnimating;
-            if (state.isAnimating) {
-                btnAnim.innerHTML = '⏸ Pause';
-                btnAnim.classList.replace('bg-amber-500/20', 'bg-amber-600');
-                btnAnim.classList.replace('text-amber-400', 'text-white');
-            } else {
-                btnAnim.innerHTML = '▶ Auto-Play Day';
-                btnAnim.classList.replace('bg-amber-600', 'bg-amber-500/20');
-                btnAnim.classList.replace('text-white', 'text-amber-400');
-            }
-        });
-
-        // Camera View Buttons
-        document.querySelectorAll('.cam-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const view = e.target.dataset.view;
-                if (view === 'isometric') {
-                    camera.position.set(15, 12, 15);
-                    controls.target.set(0, H/2, 0);
-                } else if (view === 'top') {
-                    camera.position.set(0, 30, 0);
-                    controls.target.set(0, H/2, 0);
-                } else if (view === 'observer') {
-                    // Position just inside the outer wall, looking at the pillar
-                    camera.position.set(-R_INNER - 1, H + 1, R_INNER + 1);
-                    controls.target.set(0, H, 0);
-                }
-            });
-        });
-
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        // --- ANIMATION LOOP ---
-        const clock = new THREE.Clock();
+        function toggleDayAnimation() {
+            isAnimatingDay = !isAnimatingDay;
+            const btn = document.getElementById('animateDayBtn');
+            btn.innerText = isAnimatingDay ? '⏹ Stop Animation' : '▶ Animate Full Day Loop';
+            btn.className = isAnimatingDay ? 'btn bg-slate-800' : 'btn';
+        }
 
         function animate() {
             requestAnimationFrame(animate);
             
-            const delta = clock.getDelta();
-
-            if (state.isAnimating) {
-                state.time += delta * 0.5; // speed multiplier
-                if (state.time > 18) state.time = 6; // Loop back to morning
-                tSlider.value = state.time;
-                updateAstronomy();
+            if (isAnimatingDay) {
+                const timeInput = document.getElementById('timeInput');
+                let [hours, minutes] = timeInput.value.split(':').map(Number);
+                minutes += animSpeed;
+                if (minutes >= 60) { minutes -= 60; hours++; }
+                if (hours >= 24) { hours = 0; } // Loop day
+                
+                timeInput.value = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+                updateSimulation();
             }
 
             controls.update();
             renderer.render(scene, camera);
         }
 
-        // Init
-        updateAstronomy();
-        animate();
+        // Window Resize Logic
+        window.addEventListener('resize', () => {
+            const isMobile = window.innerWidth <= 768;
+            const w = isMobile ? window.innerWidth : window.innerWidth - 400;
+            const h = isMobile ? window.innerHeight / 2 : window.innerHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+        });
 
+        // Start
+        updateSimulation();
+        animate();
     </script>
 </body>
 </html>
