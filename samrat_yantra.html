@@ -1,482 +1,882 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Samrat Yantra - Supreme Instrument</title>
-<style>
-    :root {
-        --primary: #f59e0b;
-        --bg: #0f172a;
-        --panel-bg: rgba(15, 23, 42, 0.85);
-        --text: #f8fafc;
-        --text-muted: #94a3b8;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; }
-    #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100vh; }
-    
-    .ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; z-index: 10; }
-    .panel { background: var(--panel-bg); border: 1px solid rgba(245, 158, 11, 0.2); backdrop-filter: blur(10px); border-radius: 12px; pointer-events: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-    
-    .header { padding: 20px; max-width: 400px; }
-    h1 { font-size: 24px; color: var(--primary); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
-    p.subtitle { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Samrat Yantra - 3D Astronomical Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary: #f59e0b;
+            --primary-hover: #d97706;
+            --bg: #0f172a;
+            --panel-bg: rgba(15, 23, 42, 0.90);
+        }
+        body { margin: 0; overflow: hidden; background-color: var(--bg); color: #e2e8f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        
+        #ui-panel { 
+            position: absolute; top: 0; right: 0; width: 420px; height: 100%; 
+            background: var(--panel-bg); backdrop-filter: blur(12px); 
+            border-left: 1px solid rgba(245, 158, 11, 0.2); z-index: 10; 
+            display: flex; flex-direction: column; transition: transform 0.3s ease; 
+            box-shadow: -5px 0 30px rgba(0,0,0,0.6); 
+        }
+        
+        @media (max-width: 768px) {
+            #ui-panel { width: 100%; transform: translateY(calc(100% - 60px)); top: auto; bottom: 0; border-left: none; border-top: 1px solid rgba(245, 158, 11, 0.2); height: 85vh; }
+            #ui-panel.open { transform: translateY(0); }
+            #mobile-toggle { display: flex !important; }
+        }
 
-    .measurement-box { position: absolute; top: 20px; right: 20px; width: 340px; padding: 20px; }
-    .m-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--primary); margin-bottom: 15px; border-bottom: 1px solid rgba(245, 158, 11, 0.3); padding-bottom: 8px; }
-    
-    .data-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-    .data-row { background: rgba(0,0,0,0.4); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
-    .d-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
-    .d-value { font-size: 18px; font-weight: 600; font-family: monospace; color: #fff; }
-    .d-value.highlight { color: #10b981; font-size: 22px; }
-    .d-sub { font-size: 11px; color: #64748b; margin-top: 4px; font-family: monospace; }
+        .tab-btn { padding: 14px 0; text-align: center; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; color: #94a3b8; flex: 1; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .tab-btn.active { color: var(--primary); border-bottom: 2px solid var(--primary); background: rgba(245, 158, 11, 0.05); }
+        .tab-btn:hover:not(.active) { color: #e2e8f0; background: rgba(255, 255, 255, 0.05); }
+        
+        .tab-content { display: none; padding: 24px; overflow-y: auto; flex: 1; }
+        .tab-content.active { display: block; }
 
-    .controls { padding: 20px; max-width: 500px; align-self: flex-start; }
-    .control-group { margin-bottom: 15px; }
-    .control-group:last-child { margin-bottom: 0; }
-    .c-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
-    .c-val { color: var(--primary); font-family: monospace; font-size: 14px; }
-    
-    input[type=range] { width: 100%; -webkit-appearance: none; background: transparent; }
-    input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; }
-    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: var(--primary); cursor: pointer; margin-top: -5px; box-shadow: 0 0 10px rgba(245, 158, 11, 0.5); }
-    
-    .legend { display: flex; gap: 15px; margin-top: 15px; font-size: 11px; color: var(--text-muted); }
-    .legend-item { display: flex; align-items: center; gap: 6px; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
-    .btn-animate { width: 100%; padding: 10px; margin-top: 15px; background: var(--primary); color: #fff; border: none; border-radius: 6px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: background 0.3s; }
-    .btn-animate:hover { background: #d97706; }
-    .btn-animate.playing { background: #ef4444; }
-    .btn-animate.playing:hover { background: #dc2626; }
+        /* Sliders */
+        input[type="range"] { -webkit-appearance: none; width: 100%; background: transparent; margin: 10px 0; }
+        input[type="range"]::-webkit-slider-runnable-track { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; border: 1px solid rgba(255,255,255,0.05); }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; height: 18px; width: 18px; border-radius: 50%; background: var(--primary); cursor: pointer; margin-top: -6px; box-shadow: 0 0 10px rgba(245, 158, 11, 0.4); border: 2px solid #fff; transition: transform 0.1s; }
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.1); }
+        
+        /* Inputs */
+        input[type="date"], input[type="time"] { color-scheme: dark; }
 
-    #info-msg { position: absolute; bottom: 20px; right: 20px; font-size: 12px; color: var(--text-muted); font-style: italic; max-width: 300px; text-align: right; }
-</style>
+        .stat-box { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+        .stat-label { font-size: 0.70rem; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 1px; margin-bottom: 4px; }
+        .stat-value { font-size: 1.35rem; font-weight: 600; color: #f8fafc; font-family: monospace; }
+        .stat-highlight { color: #10b981; font-size: 1.75rem; }
+
+        .btn-primary { background: var(--primary); color: white; padding: 12px 16px; border-radius: 6px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; transition: background 0.3s; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-primary.playing { background: #ef4444; }
+        .btn-primary.playing:hover { background: #dc2626; }
+        .btn-secondary { background: rgba(255,255,255,0.1); color: white; padding: 10px 16px; border-radius: 6px; font-weight: 600; transition: background 0.2s; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; width: 100%; font-size: 0.85rem; }
+        .btn-secondary:hover { background: rgba(255,255,255,0.15); }
+
+        #overlay-title { position: absolute; top: 25px; left: 25px; z-index: 5; pointer-events: none; text-shadow: 0 2px 8px rgba(0,0,0,0.8); max-width: 400px; }
+        
+        .loader { border: 2px solid rgba(255,255,255,0.2); border-top: 2px solid var(--primary); border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; display: none; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: #94a3b8; margin-top: 8px; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+        
+        /* Custom checkbox */
+        .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.85rem; color: #cbd5e1; }
+        .checkbox-label input { accent-color: var(--primary); width: 16px; height: 16px; cursor: pointer; }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
 </head>
 <body>
 
-<div id="canvas-container"></div>
+    <div id="canvas-container"></div>
 
-<div class="ui-overlay">
-    <div class="panel header">
-        <h1>Samrat Yantra</h1>
-        <p class="subtitle">The Supreme Instrument: A giant equatorial sundial capable of measuring time to an accuracy of 2 seconds, located in Jaipur (Lat 26.9° N).</p>
-    </div>
-
-    <div class="panel measurement-box">
-        <div class="m-title">Precise Angle & Time Measurement</div>
-        <div class="data-grid">
-            <div class="data-row">
-                <div class="d-label">Shadow Position (Hour Angle)</div>
-                <div class="d-value" id="val-ha">00° 00' 00"</div>
-                <div class="d-sub" id="val-ha-dec">0.000°</div>
-            </div>
-            <div class="data-row">
-                <div class="d-label">Measured Local Solar Time</div>
-                <div class="d-value highlight" id="val-time">12:00:00</div>
-                <div class="d-sub" id="val-meridian">Noon (Meridian Transit)</div>
-            </div>
-            <div class="data-row">
-                <div class="d-label">Sun Declination</div>
-                <div class="d-value" id="val-dec">00° 00' 00"</div>
-            </div>
+    <div id="overlay-title">
+        <h1 class="text-3xl font-black text-amber-500 tracking-widest uppercase mb-1">Samrat Yantra</h1>
+        <p class="text-slate-300 font-medium text-sm leading-relaxed border-l-2 border-amber-500 pl-3">The Supreme Instrument: A giant equatorial sundial capable of measuring local solar time to an accuracy of 2 seconds.</p>
+        <div id="floating-time" class="mt-4 text-3xl font-mono text-emerald-400 bg-black/60 px-4 py-2 rounded-lg inline-block backdrop-blur-md border border-white/10 shadow-lg">
+            --:--:--
+        </div>
+        <div class="legend-item mt-4 bg-black/40 px-3 py-2 rounded border border-white/5 inline-flex backdrop-blur-sm">
+            <div class="legend-dot bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]"></div> 
+            <span class="text-xs">Red line indicates the exact theoretical shadow marker</span>
         </div>
     </div>
 
-    <div class="panel controls">
-        <div class="control-group">
-            <div class="c-header">
-                <span>Time of Day</span>
-                <span class="c-val" id="lbl-time">12:00 PM</span>
+    <div id="ui-panel">
+        <div id="mobile-toggle" class="hidden h-[60px] bg-slate-800/90 flex items-center justify-between px-5 cursor-pointer border-b border-amber-500/20 backdrop-blur-md">
+            <span class="font-bold text-lg text-amber-500 tracking-wide uppercase">Menu & Controls</span>
+            <span id="mobile-icon" class="text-2xl text-amber-500">▲</span>
+        </div>
+
+        <div class="flex border-b border-white/10 bg-black/20">
+            <div class="tab-btn active" data-tab="controls">Simulation Control</div>
+            <div class="tab-btn" data-tab="data">Math & Data</div>
+            <div class="tab-btn" data-tab="about">Design & About</div>
+        </div>
+
+        <!-- SIMULATION CONTROL TAB -->
+        <div id="tab-controls" class="tab-content active">
+            <!-- Location Settings -->
+            <div class="mb-6 bg-black/30 p-4 rounded-lg border border-white/5">
+                <label class="block text-[10px] font-bold text-amber-500 uppercase tracking-wider mb-2">1. Observatory Location</label>
+                <select id="location-select" class="w-full bg-black/40 border border-white/10 text-white rounded p-2 text-sm focus:outline-none focus:border-amber-500 transition-colors mb-3">
+                    <option value="jaipur">Jaipur Observatory (26.92° N)</option>
+                    <option value="delhi">Delhi Observatory (28.61° N)</option>
+                    <option value="ujjain">Ujjain Observatory (23.18° N)</option>
+                    <option value="varanasi">Varanasi Observatory (25.31° N)</option>
+                    <option value="custom">Custom Coordinates / Live Tracking...</option>
+                </select>
+
+                <div id="custom-loc-div" class="hidden space-y-3 pt-2 border-t border-white/5">
+                    <div class="flex gap-3">
+                        <div class="flex-1">
+                            <label class="block text-[10px] text-slate-400 uppercase tracking-wide mb-1">Latitude (°)</label>
+                            <input type="number" id="input-lat" step="0.1" class="w-full bg-black/60 border border-white/10 rounded p-2 text-white text-sm focus:border-amber-500 outline-none">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-[10px] text-slate-400 uppercase tracking-wide mb-1">Longitude (°)</label>
+                            <input type="number" id="input-lon" step="0.1" class="w-full bg-black/60 border border-white/10 rounded p-2 text-white text-sm focus:border-amber-500 outline-none">
+                        </div>
+                    </div>
+                    <button id="btn-geo" class="w-full bg-blue-600 hover:bg-blue-500 text-white p-2 rounded text-sm font-bold transition flex justify-center items-center gap-2">
+                        <span>📍 Use Live Location Tracking</span>
+                        <div id="geo-loader" class="loader"></div>
+                    </button>
+                    <p class="text-[10px] text-slate-400 italic mt-1 text-center">Structure physically adapts to Latitude.</p>
+                </div>
             </div>
-            <input type="range" id="slider-time" min="6" max="18" step="0.001" value="12">
-        </div>
-        <div class="control-group">
-            <div class="c-header">
-                <span>Day of Year (Declination)</span>
-                <span class="c-val" id="lbl-day">Equinox</span>
+
+            <!-- Date/Time Settings -->
+            <div class="mb-6 bg-black/30 p-4 rounded-lg border border-white/5">
+                <label class="block text-[10px] font-bold text-amber-500 uppercase tracking-wider mb-3">2. Manual Date & Time</label>
+                
+                <div class="flex gap-3 mb-4">
+                    <div class="flex-1">
+                        <label class="block text-[10px] text-slate-400 uppercase tracking-wide mb-1">Set Date</label>
+                        <input type="date" id="date-picker" class="w-full bg-black/60 border border-white/10 rounded p-2 text-white text-sm focus:border-amber-500 outline-none">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-[10px] text-slate-400 uppercase tracking-wide mb-1">Set Time</label>
+                        <input type="time" id="time-picker" class="w-full bg-black/60 border border-white/10 rounded p-2 text-white text-sm focus:border-amber-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="space-y-4 pt-2 border-t border-white/5">
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <label class="block text-[10px] text-slate-400 uppercase tracking-wide">Or Scrub Time</label>
+                            <span id="slider-time-display" class="text-[10px] font-mono text-amber-400">12:00 PM</span>
+                        </div>
+                        <input type="range" id="time-slider" min="6" max="18" step="0.01" value="12">
+                    </div>
+                    <div>
+                        <div class="flex justify-between mb-1">
+                            <label class="block text-[10px] text-slate-400 uppercase tracking-wide">Or Scrub Date (Day of Year)</label>
+                            <span id="slider-day-display" class="text-[10px] font-mono text-amber-400">Day 80</span>
+                        </div>
+                        <input type="range" id="day-slider" min="1" max="365" step="1" value="80">
+                    </div>
+                </div>
             </div>
-            <input type="range" id="slider-day" min="1" max="365" step="1" value="80">
+
+            <!-- Animation & Scene -->
+            <div class="space-y-3">
+                <button id="btn-play" class="btn-primary text-sm shadow-[0_0_15px_rgba(245,158,11,0.3)]">
+                    ▶ Play Full Day Animation Loop
+                </button>
+                
+                <label class="checkbox-label bg-black/30 p-3 rounded-lg border border-white/5">
+                    <input type="checkbox" id="toggle-observer" checked>
+                    <span>Show Virtual Observer (For Scale)</span>
+                </label>
+
+                <button id="btn-reset-cam" class="btn-secondary">🎥 Reset Camera View</button>
+            </div>
         </div>
-        <div class="legend">
-            <div class="legend-item"><div class="dot" style="background: #ef4444;"></div> Exact Reading Marker</div>
-            <div class="legend-item"><div class="dot" style="background: #000; border: 1px solid #fff;"></div> True Shadow</div>
+
+        <!-- MATH & DATA TAB -->
+        <div id="tab-data" class="tab-content">
+            <div class="stat-box border border-emerald-500/30 bg-emerald-500/10 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-16 h-16 bg-emerald-500/20 rounded-full blur-xl -mr-8 -mt-8"></div>
+                <div class="stat-label text-emerald-400">Measured Local Solar Time</div>
+                <div class="stat-value stat-highlight" id="data-lst">12:00:00</div>
+                <div class="text-[10px] text-emerald-400/70 mt-1 uppercase tracking-wider font-bold" id="data-meridian">Noon (Meridian Transit)</div>
+            </div>
+
+            <div class="stat-box">
+                <div class="stat-label text-amber-500">Shadow Position (Hour Angle)</div>
+                <div class="stat-value text-xl" id="data-ha">00° 00' 00"</div>
+                <div class="text-xs text-slate-400 mt-1 font-mono flex justify-between">
+                    <span id="data-ha-dec">0.000°</span>
+                    <span id="data-quadrant" class="text-amber-500/80"></span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <div class="stat-box mb-0">
+                    <div class="stat-label">Sun Declination</div>
+                    <div class="stat-value text-lg" id="data-dec">0.00°</div>
+                </div>
+                <div class="stat-box mb-0">
+                    <div class="stat-label">Sun Altitude</div>
+                    <div class="stat-value text-lg" id="data-alt">0.00°</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <div class="stat-box mb-0">
+                    <div class="stat-label">Standard Clock</div>
+                    <div class="stat-value text-lg" id="data-clock">--:--</div>
+                </div>
+                <div class="stat-box mb-0">
+                    <div class="stat-label">Equation of Time</div>
+                    <div class="stat-value text-lg" id="data-eot">-- min</div>
+                </div>
+            </div>
+
+            <div class="mt-4 p-3 bg-black/40 rounded border border-white/5">
+                <div class="text-[10px] uppercase text-slate-500 font-bold mb-2">Astronomical Math Engine</div>
+                <div class="font-mono text-[11px] text-slate-300 space-y-1">
+                    <div>LAT = LMT + Eq. of Time</div>
+                    <div>Hour Angle = 15° × (LAT - 12)</div>
+                    <div class="text-amber-500/80 mt-2">15° angular displacement = 1 Hour</div>
+                </div>
+            </div>
         </div>
-        <button id="btn-animate" class="btn-animate">▶ Play Full Day Animation</button>
+
+        <!-- DESIGN & ABOUT TAB -->
+        <div id="tab-about" class="tab-content text-slate-300 space-y-4 text-sm leading-relaxed">
+            <h2 class="text-xl font-black text-amber-500 uppercase tracking-widest">Architectural Design</h2>
+            <p>The <strong>Samrat Yantra</strong> is built on the precise principles of an equatorial sundial, essentially acting as a physical representation of the Earth's coordinate system.</p>
+            
+            <div class="bg-black/30 p-4 rounded-lg border border-white/5 space-y-3 mt-4">
+                <h3 class="font-bold text-white text-xs uppercase tracking-wider border-b border-white/10 pb-2">Structural Geometry</h3>
+                <p><strong>The Gnomon (Central Triangle):</strong> The sloping hypotenuse edge points exactly to the North Celestial Pole. The angle of this slope relative to the ground is <em>always equal to the observatory's local latitude</em>.</p>
+                <p><strong>The Quadrants:</strong> The two curved scales form a plane perfectly perpendicular to the gnomon, making them parallel to the Earth's equator. This ensures the sun's shadow moves at a uniform rate of 15 degrees per hour.</p>
+            </div>
+
+            <div class="bg-black/30 p-4 rounded-lg border border-white/5 space-y-3 mt-4">
+                <h3 class="font-bold text-white text-xs uppercase tracking-wider border-b border-white/10 pb-2">The Need for Massive Scale</h3>
+                <p>The Jaipur Samrat Yantra is 27 meters (89 ft) tall. Due to this massive radius, the shadow sweeps across the quadrant at approximately <strong>1 millimeter per second</strong>.</p>
+                <p>This macro-scale physical design allowed astronomers to visually see time passing and record local solar time to an astonishing precision of just 2 seconds.</p>
+            </div>
+        </div>
     </div>
-    
-    <div id="info-msg">Drag to orbit. Scroll to zoom. The red line on the quadrant represents the exact theoretical shadow edge for precise measurement.</div>
-</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>
-// Astronomical Constants
-const LATITUDE = 26.92 * Math.PI / 180; // Jaipur Latitude
-const RADIUS = 22.5; // Adjusted so the bottom precisely meets the gnomon at ground level
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-let scene, camera, renderer;
-let sunLight, sunSphere, shadowMarker;
-let quadThickness = 4; // Radial thickness of the scale
-let isAnimating = false;
+        // --- CONSTANTS & CONFIG ---
+        const LOCATIONS = {
+            jaipur:   { lat: 26.92, lon: 75.82, tz: 5.5, name: "Jaipur" },
+            delhi:    { lat: 28.61, lon: 77.20, tz: 5.5, name: "Delhi" },
+            ujjain:   { lat: 23.18, lon: 75.77, tz: 5.5, name: "Ujjain" },
+            varanasi: { lat: 25.31, lon: 82.97, tz: 5.5, name: "Varanasi" }
+        };
 
-function init() {
-    // 1. Setup Scene
-    const container = document.getElementById('canvas-container');
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0f172a);
-    scene.fog = new THREE.FogExp2(0x0f172a, 0.002);
+        const RADIUS = 22.5; 
+        const QUAD_THICKNESS = 4;
+        const QUAD_WIDTH = 10;
+        const CENTER_OFFSET = -40; 
 
-    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
-    camera.position.set(-80, 60, 40);
+        // --- STATE ---
+        const state = {
+            lat: LOCATIONS.jaipur.lat,
+            lon: LOCATIONS.jaipur.lon,
+            tzOffset: LOCATIONS.jaipur.tz,
+            dayOfYear: 80, // Default Spring Equinox
+            timeHours: 12.0, // 12:00 PM
+            isPlaying: false,
+            speed: 0.015, // animation step per frame
+            yantraGroup: null, 
+            shadowMarker: null,
+            virtualObserver: null
+        };
 
-    renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    container.appendChild(renderer.domElement);
+        // --- DOM ELEMENTS ---
+        const els = {
+            sliderTime: document.getElementById('time-slider'),
+            displaySliderTime: document.getElementById('slider-time-display'),
+            sliderDay: document.getElementById('day-slider'),
+            displaySliderDay: document.getElementById('slider-day-display'),
+            pickerDate: document.getElementById('date-picker'),
+            pickerTime: document.getElementById('time-picker'),
+            displayFloatingTime: document.getElementById('floating-time'),
+            selectLoc: document.getElementById('location-select'),
+            divCustomLoc: document.getElementById('custom-loc-div'),
+            inputLat: document.getElementById('input-lat'),
+            inputLon: document.getElementById('input-lon'),
+            btnGeo: document.getElementById('btn-geo'),
+            geoLoader: document.getElementById('geo-loader'),
+            btnPlay: document.getElementById('btn-play'),
+            btnResetCam: document.getElementById('btn-reset-cam'),
+            toggleObserver: document.getElementById('toggle-observer'),
+            
+            // Data Labels
+            dLst: document.getElementById('data-lst'),
+            dMeridian: document.getElementById('data-meridian'),
+            dClock: document.getElementById('data-clock'),
+            dEot: document.getElementById('data-eot'),
+            dHa: document.getElementById('data-ha'),
+            dHaDec: document.getElementById('data-ha-dec'),
+            dQuadrant: document.getElementById('data-quadrant'),
+            dDec: document.getElementById('data-dec'),
+            dAlt: document.getElementById('data-alt')
+        };
 
-    // 2. Lighting
-    scene.add(new THREE.AmbientLight(0x1e293b, 0.6));
-    
-    sunLight = new THREE.DirectionalLight(0xfff5e0, 2.0);
-    sunLight.castShadow = true;
-    sunLight.shadow.mapSize.width = 4096;
-    sunLight.shadow.mapSize.height = 4096;
-    sunLight.shadow.camera.near = 10;
-    sunLight.shadow.camera.far = 400;
-    const d = 80;
-    sunLight.shadow.camera.left = -d;
-    sunLight.shadow.camera.right = d;
-    sunLight.shadow.camera.top = d;
-    sunLight.shadow.camera.bottom = -d;
-    sunLight.shadow.bias = -0.0005;
-    scene.add(sunLight);
+        // --- THREE.JS SETUP ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0f172a); 
+        scene.fog = new THREE.FogExp2(0x0f172a, 0.002);
 
-    // 3. Build Samrat Yantra
-    buildYantra();
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 2000);
+        camera.position.set(-90, 80, 50);
 
-    // 4. Interaction & Events
-    setupOrbitControls();
-    window.addEventListener('resize', onWindowResize);
-    document.getElementById('slider-time').addEventListener('input', () => { isAnimating = false; updatePlayButton(); updateAstronomy(); });
-    document.getElementById('slider-day').addEventListener('input', updateAstronomy);
-    document.getElementById('btn-animate').addEventListener('click', toggleAnimation);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
 
-    updateAstronomy();
-    animate();
-}
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 + 0.1; // allow slight below ground
+        controls.minDistance = 20;
+        controls.maxDistance = 500;
+        controls.target.set(0, 20, CENTER_OFFSET);
 
-function toggleAnimation() {
-    isAnimating = !isAnimating;
-    updatePlayButton();
-    if (isAnimating) {
-        const slider = document.getElementById('slider-time');
-        if (parseFloat(slider.value) >= 17.9) {
-            slider.value = 6; // Reset to morning if at the end of the day
-            updateAstronomy();
-        }
-    }
-}
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x1e293b, 0.6);
+        scene.add(ambientLight);
 
-function updatePlayButton() {
-    const btn = document.getElementById('btn-animate');
-    if (isAnimating) {
-        btn.innerHTML = '⏸ Pause Animation';
-        btn.classList.add('playing');
-    } else {
-        btn.innerHTML = '▶ Play Full Day Animation';
-        btn.classList.remove('playing');
-    }
-}
+        const sunLight = new THREE.DirectionalLight(0xfff5e0, 2.0);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 4096;
+        sunLight.shadow.mapSize.height = 4096;
+        const d = 120;
+        sunLight.shadow.camera.left = -d;
+        sunLight.shadow.camera.right = d;
+        sunLight.shadow.camera.top = d;
+        sunLight.shadow.camera.bottom = -d;
+        sunLight.shadow.camera.near = 10;
+        sunLight.shadow.camera.far = 1000;
+        sunLight.shadow.bias = -0.0005;
+        scene.add(sunLight);
 
-function buildYantra() {
-    // Materials
-    const matSandstone = new THREE.MeshStandardMaterial({ color: 0xcc7755, roughness: 0.9 });
-    const matMarble = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.5 });
-    const matGround = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 1 });
-
-    // Ground
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), matGround);
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    scene.add(ground);
-
-    // --- GNOMON (The triangular wall) ---
-    // The hypotenuse points to the North Celestial Pole (angle = Latitude)
-    const gnomonLength = 80; // Extends along -Z axis (North-South line)
-    const gnomonHeight = gnomonLength * Math.tan(LATITUDE);
-    
-    const shape = new THREE.Shape();
-    shape.moveTo(0, 0); // South base
-    shape.lineTo(-gnomonLength, 0); // North base
-    shape.lineTo(-gnomonLength, gnomonHeight); // North peak
-    shape.lineTo(0, 0); // Hypotenuse connects back to South
-
-    const extrudeSettings = { depth: 4, bevelEnabled: false };
-    const gnomonGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-    
-    // Default Extrude is along +Z. Rotate around Y so XY shape falls on YZ plane extending into -Z
-    gnomonGeo.rotateY(-Math.PI / 2); 
-    // Center it on the X axis (width is 4, moving +2 centers it)
-    gnomonGeo.translate(2, 0, 0); 
-
-    const gnomon = new THREE.Mesh(gnomonGeo, matSandstone);
-    gnomon.castShadow = true;
-    gnomon.receiveShadow = true;
-    scene.add(gnomon);
-
-    // Marble hypotenuse edge for casting sharp shadows
-    const edgeLength = Math.sqrt(gnomonLength * gnomonLength + gnomonHeight * gnomonHeight);
-    const edgeGeo = new THREE.BoxGeometry(4.0, 0.5, edgeLength);
-    const edge = new THREE.Mesh(edgeGeo, matMarble);
-    // Position at exact center of the slope
-    edge.position.set(0, gnomonHeight/2, -gnomonLength/2);
-    edge.rotation.x = LATITUDE; // Tilt to face the pole
-    scene.add(edge);
-
-    // --- EQUATORIAL QUADRANTS (The Circular Scales) ---
-    // The quadrants are arcs of a circle lying parallel to the equator.
-    // They are perpendicular to the gnomon's hypotenuse.
-    const quadWidth = 10;
-    const equatorCenter = new THREE.Vector3(0, gnomonHeight/2, -gnomonLength/2);
-    const poleDir = new THREE.Vector3(0, Math.sin(LATITUDE), -Math.cos(LATITUDE));
-    
-    // We create a central pivot aligned to the equator plane to attach quadrants and markers
-    const equatorPivot = new THREE.Object3D();
-    equatorPivot.position.copy(equatorCenter);
-    equatorPivot.lookAt(equatorCenter.clone().add(poleDir));
-    scene.add(equatorPivot);
-
-    // Geometry parameters for precise arcs
-    const arcSettings = { depth: quadWidth, bevelEnabled: false, curveSegments: 128 };
-
-    // West Quadrant (Morning Measurements - Left side)
-    const shapeWest = new THREE.Shape();
-    // Arc going from West (180°) down to Bottom (270°)
-    shapeWest.absarc(0, 0, RADIUS + quadThickness, Math.PI, 1.5 * Math.PI, false);
-    shapeWest.absarc(0, 0, RADIUS, 1.5 * Math.PI, Math.PI, true);
-    
-    const geoWest = new THREE.ExtrudeGeometry(shapeWest, arcSettings);
-    geoWest.translate(0, 0, -quadWidth/2); // Center along Z
-    const quadWest = new THREE.Mesh(geoWest, matMarble);
-    quadWest.translateX(-2.0); // Exactly flush with the gnomon (width is 4, edges at -2)
-    quadWest.receiveShadow = true;
-    quadWest.castShadow = true;
-    equatorPivot.add(quadWest);
-
-    // East Quadrant (Afternoon Measurements - Right side)
-    const shapeEast = new THREE.Shape();
-    // Arc going from Bottom (270°) up to East (360°/0°)
-    shapeEast.absarc(0, 0, RADIUS + quadThickness, 1.5 * Math.PI, 2 * Math.PI, false);
-    shapeEast.absarc(0, 0, RADIUS, 2 * Math.PI, 1.5 * Math.PI, true);
-    
-    const geoEast = new THREE.ExtrudeGeometry(shapeEast, arcSettings);
-    geoEast.translate(0, 0, -quadWidth/2); // Center along Z
-    const quadEast = new THREE.Mesh(geoEast, matMarble);
-    quadEast.translateX(2.0); // Exactly flush with the gnomon
-    quadEast.receiveShadow = true;
-    quadEast.castShadow = true;
-    equatorPivot.add(quadEast);
-
-    // Add Measurement Lines (Hours and Ticks) across the quadrants
-    const matLineHour = new THREE.MeshBasicMaterial({color: 0xf59e0b});
-    const matLineTick = new THREE.MeshBasicMaterial({color: 0x94a3b8});
-    
-    for(let i = -90; i <= 90; i += 5) {
-        if(i === 0) continue; // Skip noon as the gnomon is here
-        const localAngle = 1.5 * Math.PI + (i * Math.PI / 180);
-        const shiftX = i < 0 ? -2 : 2; // Shift lines to bind to the flush quadrants
-        
-        const isHour = i % 15 === 0;
-        const lineGeo = new THREE.BoxGeometry(quadThickness * 1.05, isHour ? 0.3 : 0.1, quadWidth * 1.05);
-        const line = new THREE.Mesh(lineGeo, isHour ? matLineHour : matLineTick);
-        
-        line.position.set(
-            shiftX + (RADIUS + quadThickness/2) * Math.cos(localAngle),
-            (RADIUS + quadThickness/2) * Math.sin(localAngle),
-            0
+        // Visual Sun
+        const sunSphere = new THREE.Mesh(
+            new THREE.SphereGeometry(8, 32, 32),
+            new THREE.MeshBasicMaterial({color: 0xffdd66})
         );
-        line.rotation.set(0, 0, localAngle); // Align radially
-        equatorPivot.add(line);
-    }
+        scene.add(sunSphere);
 
-    // Precise Reading Marker (Red Line)
-    const markerGeo = new THREE.BoxGeometry(quadThickness * 1.1, 0.4, quadWidth * 1.1);
-    shadowMarker = new THREE.Mesh(markerGeo, new THREE.MeshBasicMaterial({color: 0xef4444}));
-    equatorPivot.add(shadowMarker); // Add to the pivot so it moves natively along the equator plane
+        // Environment
+        const matGround = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 1, metalness: 0 });
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), matGround);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
 
-    // Visual Sun
-    sunSphere = new THREE.Mesh(
-        new THREE.SphereGeometry(3, 16, 16),
-        new THREE.MeshBasicMaterial({color: 0xffeebb})
-    );
-    scene.add(sunSphere);
-}
+        // Base Platform
+        const platGeo = new THREE.CylinderGeometry(130, 130, 0.5, 64);
+        const platMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9 });
+        const platform = new THREE.Mesh(platGeo, platMat);
+        platform.position.y = 0.25;
+        platform.position.z = CENTER_OFFSET;
+        platform.receiveShadow = true;
+        scene.add(platform);
 
-function updateAstronomy() {
-    const timeHours = parseFloat(document.getElementById('slider-time').value);
-    const dayOfYear = parseInt(document.getElementById('slider-day').value);
+        // --- VIRTUAL OBSERVER (Scale Reference) ---
+        function createObserver() {
+            const obsGroup = new THREE.Group();
+            
+            // Body (Cylinder, approx 1.5m tall)
+            const bodyGeo = new THREE.CylinderGeometry(0.3, 0.3, 1.4, 16);
+            const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3b82f6 });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 0.7; // stand on ground
+            body.castShadow = true;
+            obsGroup.add(body);
 
-    // 1. Calculate Astronomical Values
-    // Hour Angle (HA): 12:00 = 0°, 6:00 = -90°, 18:00 = 90°
-    const HA_deg = (timeHours - 12) * 15;
-    const HA_rad = HA_deg * Math.PI / 180;
+            // Head (Sphere, approx 0.3m tall)
+            const headGeo = new THREE.SphereGeometry(0.25, 16, 16);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0xfca5a5 });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 1.55;
+            head.castShadow = true;
+            obsGroup.add(head);
 
-    // Declination (approximate formula)
-    const DEC_rad = -23.44 * Math.cos((360/365) * (dayOfYear + 10) * Math.PI / 180) * (Math.PI/180);
-    const DEC_deg = DEC_rad * 180 / Math.PI;
-
-    // 2. Update Sun Position (World Space)
-    // Using standard alt/az transformation (North = -Z)
-    const lat = LATITUDE;
-    const alt = Math.asin(Math.sin(lat)*Math.sin(DEC_rad) + Math.cos(lat)*Math.cos(DEC_rad)*Math.cos(HA_rad));
-    const az = Math.atan2(-Math.sin(HA_rad)*Math.cos(DEC_rad), Math.cos(lat)*Math.sin(DEC_rad) - Math.sin(lat)*Math.cos(DEC_rad)*Math.cos(HA_rad));
-
-    const distance = 200;
-    sunLight.position.set(
-        distance * Math.cos(alt) * Math.sin(az),
-        distance * Math.sin(alt),
-        -distance * Math.cos(alt) * Math.cos(az) // -Z is North
-    );
-    sunSphere.position.copy(sunLight.position);
-
-    // Sun intensity drops when below horizon
-    sunLight.intensity = alt > 0 ? 2.0 : 0.0;
-    sunSphere.visible = alt > 0;
-
-    // 3. Update the Precise Shadow Marker natively in Equator Pivot Space
-    // Center is 270 deg (1.5 * PI). Left/Morning is towards 180. Right/Afternoon is towards 360.
-    if (HA_deg >= -90 && HA_deg <= 90 && alt > 0 && Math.abs(HA_deg) > 0.05) {
-        shadowMarker.visible = true;
-        const localAngle = 1.5 * Math.PI + HA_rad;
-        const shiftX = HA_deg < 0 ? -2 : 2;
-        
-        shadowMarker.position.set(
-            shiftX + (RADIUS + quadThickness/2) * Math.cos(localAngle),
-            (RADIUS + quadThickness/2) * Math.sin(localAngle),
-            0
-        );
-        // Align marker parallel to the Z axis radially
-        shadowMarker.rotation.set(0, 0, localAngle); 
-    } else {
-        shadowMarker.visible = false;
-    }
-
-    // 4. Update UI Values
-    updateUI(timeHours, HA_deg, DEC_deg, dayOfYear);
-}
-
-function updateUI(time, ha, dec, day) {
-    // Format Sliders
-    let h = Math.floor(time);
-    let m = Math.floor((time - h) * 60);
-    let ampm = h >= 12 ? 'PM' : 'AM';
-    let h12 = h % 12 || 12;
-    document.getElementById('lbl-time').innerText = `${h12}:${m.toString().padStart(2, '0')} ${ampm}`;
-    
-    let dayStr = "Equinox";
-    if(day === 172) dayStr = "Summer Solstice";
-    if(day === 354) dayStr = "Winter Solstice";
-    document.getElementById('lbl-day').innerText = `Day ${day} (${dayStr})`;
-
-    // Format Precise Outputs
-    document.getElementById('val-ha').innerText = formatDMS(ha);
-    document.getElementById('val-ha-dec').innerText = ha.toFixed(4) + '°';
-
-    // Time from HA (15 deg = 1 hr -> 1 deg = 4 min -> 1' = 4 sec)
-    document.getElementById('val-time').innerText = formatTimeFromHours(time);
-    
-    let meridian = "Noon (Meridian Transit)";
-    if(ha < -0.1) meridian = "Morning (Shadow on West Quadrant)";
-    else if(ha > 0.1) meridian = "Afternoon (Shadow on East Quadrant)";
-    document.getElementById('val-meridian').innerText = meridian;
-
-    document.getElementById('val-dec').innerText = formatDMS(dec);
-}
-
-function formatDMS(degDecimal) {
-    const sign = degDecimal < 0 ? '-' : '';
-    let absDeg = Math.abs(degDecimal);
-    let d = Math.floor(absDeg);
-    let mFloat = (absDeg - d) * 60;
-    let m = Math.floor(mFloat);
-    let s = Math.round((mFloat - m) * 60);
-    if(s === 60) { s = 0; m++; }
-    if(m === 60) { m = 0; d++; }
-    return `${sign}${d.toString().padStart(2, '0')}° ${m.toString().padStart(2, '0')}' ${s.toString().padStart(2, '0')}"`;
-}
-
-function formatTimeFromHours(hoursDecimal) {
-    let h = Math.floor(hoursDecimal);
-    let mFloat = (hoursDecimal - h) * 60;
-    let m = Math.floor(mFloat);
-    let s = Math.round((mFloat - m) * 60);
-    if(s === 60) { s = 0; m++; }
-    if(m === 60) { m = 0; h++; }
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-}
-
-// Simple Orbit Controls Implementation
-let isDragging = false, prevX, prevY;
-let camAngleX = -0.5, camAngleY = 0.5, camRadius = 120;
-// Adjust target to be closer to the center of the structure
-const centerTarget = new THREE.Vector3(0, 20, -40);
-
-function setupOrbitControls() {
-    const container = document.getElementById('canvas-container');
-    container.addEventListener('mousedown', e => { isDragging = true; prevX = e.clientX; prevY = e.clientY; });
-    window.addEventListener('mouseup', () => isDragging = false);
-    window.addEventListener('mousemove', e => {
-        if(!isDragging) return;
-        let dx = e.clientX - prevX;
-        let dy = e.clientY - prevY;
-        camAngleX -= dx * 0.005;
-        camAngleY = Math.max(0.1, Math.min(Math.PI/2 - 0.1, camAngleY + dy * 0.005));
-        prevX = e.clientX; prevY = e.clientY;
-        updateCamera();
-    });
-    container.addEventListener('wheel', e => {
-        camRadius = Math.max(30, Math.min(300, camRadius + e.deltaY * 0.05));
-        updateCamera();
-    });
-    updateCamera();
-}
-
-function updateCamera() {
-    camera.position.x = centerTarget.x + camRadius * Math.cos(camAngleY) * Math.sin(camAngleX);
-    camera.position.y = centerTarget.y + camRadius * Math.sin(camAngleY);
-    camera.position.z = centerTarget.z + camRadius * Math.cos(camAngleY) * Math.cos(camAngleX);
-    camera.lookAt(centerTarget);
-}
-
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-}
-
-function animate() {
-    requestAnimationFrame(animate);
-    
-    if (isAnimating) {
-        const slider = document.getElementById('slider-time');
-        let time = parseFloat(slider.value);
-        time += 0.02; // Advance time smoothly per frame
-        if (time >= 18) {
-            time = 6; // Loop back to 6 AM
+            // Position at base of the Yantra
+            obsGroup.position.set(28, 0.5, CENTER_OFFSET + 10);
+            scene.add(obsGroup);
+            return obsGroup;
         }
-        slider.value = time;
-        updateAstronomy();
-    }
-    
-    renderer.render(scene, camera);
-}
+        state.virtualObserver = createObserver();
 
-// Ensure all definitions are loaded before bootstrapping
-init();
-</script>
+        // --- YANTRA STRUCTURAL GENERATION ---
+        function buildSamratYantra(latitudeDeg) {
+            if (state.yantraGroup) {
+                scene.remove(state.yantraGroup);
+            }
+
+            state.yantraGroup = new THREE.Group();
+            state.yantraGroup.position.z = CENTER_OFFSET; 
+
+            const latRad = latitudeDeg * Math.PI / 180;
+            const matSandstone = new THREE.MeshStandardMaterial({ color: 0xc26950, roughness: 0.95 });
+            const matMarble = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.6 });
+            const matDarkStone = new THREE.MeshStandardMaterial({ color: 0x8c4632, roughness: 1.0 });
+
+            // 1. GNOMON (The triangular wall)
+            const gnomonLength = 80; 
+            const gnomonHeight = gnomonLength * Math.tan(latRad);
+            
+            // Main structure (wider base)
+            const shape = new THREE.Shape();
+            shape.moveTo(0, 0); 
+            shape.lineTo(-gnomonLength, 0); 
+            shape.lineTo(-gnomonLength, gnomonHeight); 
+            shape.lineTo(0, 0); 
+
+            // Core Gnomon wall
+            const extrudeSettings = { depth: 8, bevelEnabled: false };
+            const gnomonGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+            gnomonGeo.rotateY(-Math.PI / 2); 
+            gnomonGeo.translate(4, 0, 0); 
+
+            const gnomon = new THREE.Mesh(gnomonGeo, matSandstone);
+            gnomon.castShadow = true;
+            gnomon.receiveShadow = true;
+            state.yantraGroup.add(gnomon);
+
+            // Central elevated reading ridge (sharp marble edge)
+            const ridgeExtrude = { depth: 2, bevelEnabled: false };
+            const ridgeGeo = new THREE.ExtrudeGeometry(shape, ridgeExtrude);
+            ridgeGeo.rotateY(-Math.PI / 2);
+            ridgeGeo.translate(1, 0, 0); // Center it
+            const ridge = new THREE.Mesh(ridgeGeo, matDarkStone);
+            // Translate slightly up and forward to pop out
+            ridge.position.y += 0.5;
+            ridge.position.z += 0.5;
+            ridge.castShadow = true;
+            state.yantraGroup.add(ridge);
+
+            // Marble hypotenuse edge for casting sharper shadows
+            const edgeLength = Math.sqrt(gnomonLength * gnomonLength + gnomonHeight * gnomonHeight);
+            const edgeGeo = new THREE.BoxGeometry(2.0, 0.6, edgeLength);
+            const edge = new THREE.Mesh(edgeGeo, matMarble);
+            edge.position.set(0, gnomonHeight/2 + 0.5, -gnomonLength/2 + 0.5);
+            edge.rotation.x = latRad; 
+            state.yantraGroup.add(edge);
+
+            // 2. EQUATORIAL PIVOT
+            const equatorCenter = new THREE.Vector3(0, gnomonHeight/2, -gnomonLength/2);
+            const poleDir = new THREE.Vector3(0, Math.sin(latRad), -Math.cos(latRad));
+            
+            const equatorPivot = new THREE.Object3D();
+            equatorPivot.position.copy(equatorCenter);
+            equatorPivot.lookAt(equatorCenter.clone().add(poleDir));
+            state.yantraGroup.add(equatorPivot);
+
+            // 3. QUADRANTS (Curved Scales)
+            const arcSettings = { depth: QUAD_WIDTH, bevelEnabled: false, curveSegments: 128 };
+
+            // West Quadrant (Morning)
+            const shapeWest = new THREE.Shape();
+            shapeWest.absarc(0, 0, RADIUS + QUAD_THICKNESS, Math.PI, 1.5 * Math.PI, false);
+            shapeWest.absarc(0, 0, RADIUS, 1.5 * Math.PI, Math.PI, true);
+            
+            const geoWest = new THREE.ExtrudeGeometry(shapeWest, arcSettings);
+            geoWest.translate(0, 0, -QUAD_WIDTH/2); 
+            const quadWest = new THREE.Mesh(geoWest, matMarble);
+            quadWest.translateX(-4.0); // Flush with wider gnomon body
+            quadWest.receiveShadow = true;
+            quadWest.castShadow = true;
+            equatorPivot.add(quadWest);
+
+            // East Quadrant (Afternoon)
+            const shapeEast = new THREE.Shape();
+            shapeEast.absarc(0, 0, RADIUS + QUAD_THICKNESS, 1.5 * Math.PI, 2 * Math.PI, false);
+            shapeEast.absarc(0, 0, RADIUS, 2 * Math.PI, 1.5 * Math.PI, true);
+            
+            const geoEast = new THREE.ExtrudeGeometry(shapeEast, arcSettings);
+            geoEast.translate(0, 0, -QUAD_WIDTH/2); 
+            const quadEast = new THREE.Mesh(geoEast, matMarble);
+            quadEast.translateX(4.0);
+            quadEast.receiveShadow = true;
+            quadEast.castShadow = true;
+            equatorPivot.add(quadEast);
+
+            // 4. TICKS & MARKERS
+            const matLineHour = new THREE.MeshBasicMaterial({color: 0x334155});
+            const matLineTick = new THREE.MeshBasicMaterial({color: 0x94a3b8});
+            
+            for(let i = -90; i <= 90; i += 3.75) { // 3.75 deg = 15 mins
+                if(Math.abs(i) < 0.1) continue; 
+                
+                const localAngle = 1.5 * Math.PI + (i * Math.PI / 180);
+                const shiftX = i < 0 ? -4 : 4; 
+                
+                const isHour = Math.abs(i) % 15 < 0.1;
+                const lineGeo = new THREE.BoxGeometry(QUAD_THICKNESS * 1.05, isHour ? 0.4 : 0.15, QUAD_WIDTH * 1.05);
+                const line = new THREE.Mesh(lineGeo, isHour ? matLineHour : matLineTick);
+                
+                line.position.set(
+                    shiftX + (RADIUS + QUAD_THICKNESS/2) * Math.cos(localAngle),
+                    (RADIUS + QUAD_THICKNESS/2) * Math.sin(localAngle),
+                    0
+                );
+                line.rotation.set(0, 0, localAngle); 
+                equatorPivot.add(line);
+            }
+
+            // 5. PRECISE READING MARKER
+            const markerGeo = new THREE.BoxGeometry(QUAD_THICKNESS * 1.15, 0.6, QUAD_WIDTH * 1.15);
+            state.shadowMarker = new THREE.Mesh(markerGeo, new THREE.MeshBasicMaterial({
+                color: 0xef4444, 
+                transparent: true, 
+                opacity: 0.8
+            }));
+            state.shadowMarker.visible = false;
+            equatorPivot.add(state.shadowMarker);
+
+            scene.add(state.yantraGroup);
+        }
+
+        // --- MATH / ASTRONOMY ---
+        function calculateSolarParameters() {
+            const { lat, lon, tzOffset, dayOfYear, timeHours } = state;
+
+            // Fractional year angle (gamma)
+            const gamma = (2 * Math.PI / 365) * (dayOfYear - 1 + (timeHours - 12) / 24);
+
+            // Equation of Time (minutes)
+            const eqTime = 229.18 * (0.000075 + 0.001868 * Math.cos(gamma) - 0.032077 * Math.sin(gamma) 
+                           - 0.014615 * Math.cos(2 * gamma) - 0.040849 * Math.sin(2 * gamma));
+
+            // Solar Declination (radians)
+            const declRad = 0.006918 - 0.399912 * Math.cos(gamma) + 0.070257 * Math.sin(gamma) 
+                         - 0.006758 * Math.cos(2 * gamma) + 0.000907 * Math.sin(2 * gamma) 
+                         - 0.002697 * Math.cos(3 * gamma) + 0.00148 * Math.sin(3 * gamma);
+
+            // Local Mean Time (hours)
+            const lmt = timeHours + (lon - tzOffset * 15) / 15;
+            
+            // Local Apparent Time (Solar Time)
+            let latHours = lmt + eqTime / 60;
+            if (latHours < 0) latHours += 24;
+            if (latHours > 24) latHours -= 24;
+
+            // Hour Angle (degrees)
+            const haDeg = (latHours - 12) * 15; 
+            const haRad = haDeg * Math.PI / 180;
+            const latRad = lat * Math.PI / 180;
+
+            // Sun Altitude & Azimuth
+            const sinAlt = Math.sin(latRad) * Math.sin(declRad) + Math.cos(latRad) * Math.cos(declRad) * Math.cos(haRad);
+            const altRad = Math.asin(Math.max(-1, Math.min(1, sinAlt))); 
+            
+            const cosAz = (Math.sin(declRad) - Math.sin(latRad) * Math.sin(altRad)) / (Math.cos(latRad) * Math.cos(altRad));
+            let azRad = Math.acos(Math.max(-1, Math.min(1, cosAz)));
+            if (Math.sin(haRad) > 0) azRad = 2 * Math.PI - azRad; // Afternoon
+
+            return { eqTime, declRad, latHours, haDeg, haRad, altRad, azRad };
+        }
+
+        // --- CONVERSION & FORMATTING UTILS ---
+        function dateToDayOfYear(dateString) {
+            const date = new Date(dateString);
+            const start = new Date(date.getFullYear(), 0, 0);
+            return Math.floor((date - start) / (1000 * 60 * 60 * 24));
+        }
+
+        function dayOfYearToDateStr(dayOfYear) {
+            const date = new Date(new Date().getFullYear(), 0, dayOfYear);
+            return date.toISOString().split('T')[0];
+        }
+
+        function decimalToTimeString(decHours) {
+            let h = Math.floor(decHours);
+            let m = Math.floor((decHours - h) * 60);
+            if(h >= 24) h -= 24;
+            if(h < 0) h += 24;
+            return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+        }
+
+        function timeStringToDecimal(timeStr) {
+            const [h, m] = timeStr.split(':').map(Number);
+            return h + (m / 60);
+        }
+
+        function formatDMS(degDecimal) {
+            const sign = degDecimal < 0 ? '-' : '';
+            let absDeg = Math.abs(degDecimal);
+            let d = Math.floor(absDeg);
+            let mFloat = (absDeg - d) * 60;
+            let m = Math.floor(mFloat);
+            let s = Math.round((mFloat - m) * 60);
+            if(s === 60) { s = 0; m++; }
+            if(m === 60) { m = 0; d++; }
+            return `${sign}${d.toString().padStart(2, '0')}° ${m.toString().padStart(2, '0')}' ${s.toString().padStart(2, '0')}"`;
+        }
+
+        function formatTime12(decimalHours, showSeconds = false) {
+            let h = Math.floor(decimalHours);
+            let mFloat = (decimalHours - h) * 60;
+            let m = Math.floor(mFloat);
+            let s = Math.floor((mFloat - m) * 60);
+
+            if (h >= 24) h -= 24;
+            if (h < 0) h += 24;
+
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const h12 = h % 12 || 12;
+            const p = n => n.toString().padStart(2, '0');
+            
+            if (showSeconds) return `${p(h12)}:${p(m)}:${p(s)} ${ampm}`;
+            return `${p(h12)}:${p(m)} ${ampm}`;
+        }
+
+        // --- UPDATE LOOP ---
+        function updateSimulation(source = 'system') {
+            // Bi-directional UI syncing based on what triggered the update
+            if(source !== 'time_slider' && source !== 'time_picker') {
+                els.sliderTime.value = state.timeHours;
+                els.pickerTime.value = decimalToTimeString(state.timeHours);
+            }
+            if(source !== 'day_slider' && source !== 'date_picker') {
+                els.sliderDay.value = state.dayOfYear;
+                els.pickerDate.value = dayOfYearToDateStr(state.dayOfYear);
+            }
+
+            els.displaySliderTime.innerText = formatTime12(state.timeHours);
+            els.displaySliderDay.innerText = `Day ${state.dayOfYear}`;
+
+            // 1. Math
+            const astro = calculateSolarParameters();
+            
+            // 2. Update 3D Sun Position
+            const dist = 500;
+            const x = dist * Math.cos(astro.altRad) * Math.sin(astro.azRad);
+            const y = dist * Math.sin(astro.altRad);
+            const z = -dist * Math.cos(astro.altRad) * Math.cos(astro.azRad);
+
+            sunLight.position.set(x, y, z + CENTER_OFFSET);
+            sunSphere.position.copy(sunLight.position);
+
+            const altDeg = astro.altRad * 180 / Math.PI;
+
+            // Day/Night transitions
+            if (altDeg > 0) {
+                sunLight.intensity = Math.min(2.0, altDeg * 0.15);
+                scene.background.lerpColors(new THREE.Color(0xec4899), new THREE.Color(0x38bdf8), Math.min(1, altDeg/15)); // Sunrise/set to Day
+                scene.fog.color.copy(scene.background);
+                sunLight.castShadow = true;
+                ambientLight.intensity = 0.6;
+                sunSphere.visible = true;
+            } else {
+                sunLight.intensity = 0;
+                scene.background.setHex(0x0f172a); // Night
+                scene.fog.color.setHex(0x0f172a);
+                sunLight.castShadow = false;
+                ambientLight.intensity = 0.1;
+                sunSphere.visible = false;
+            }
+
+            // 3. Update Precise Shadow Marker 
+            if (altDeg > 0 && Math.abs(astro.haDeg) > 0.05 && Math.abs(astro.haDeg) <= 90) {
+                state.shadowMarker.visible = true;
+                
+                const localAngle = 1.5 * Math.PI + astro.haRad;
+                const shiftX = astro.haDeg < 0 ? -4 : 4; // Snap to West or East quad
+                
+                state.shadowMarker.position.set(
+                    shiftX + (RADIUS + QUAD_THICKNESS/2) * Math.cos(localAngle),
+                    (RADIUS + QUAD_THICKNESS/2) * Math.sin(localAngle),
+                    0
+                );
+                state.shadowMarker.rotation.set(0, 0, localAngle); 
+            } else {
+                state.shadowMarker.visible = false;
+            }
+
+            // 4. Update UI Data
+            els.dClock.innerText = formatTime12(state.timeHours);
+            els.dEot.innerText = `${astro.eqTime > 0 ? '+' : ''}${astro.eqTime.toFixed(1)} min`;
+            els.dDec.innerText = formatDMS(astro.declRad * 180 / Math.PI);
+            els.dAlt.innerText = formatDMS(altDeg);
+            
+            const lsrStr = formatTime12(astro.latHours, true);
+            els.dLst.innerText = lsrStr;
+            els.displayFloatingTime.innerText = lsrStr;
+
+            els.dHa.innerText = formatDMS(astro.haDeg);
+            els.dHaDec.innerText = `${Math.abs(astro.haDeg).toFixed(2)}° on scale`;
+
+            if (altDeg <= 0) {
+                els.dMeridian.innerText = "Sun below horizon (Night)";
+                els.dQuadrant.innerText = "No shadow";
+                els.dQuadrant.className = "text-slate-500";
+            } else if (astro.haDeg < -0.1) {
+                els.dMeridian.innerText = "Morning (Sun East, Shadow West)";
+                els.dQuadrant.innerText = "Reading West Quadrant";
+                els.dQuadrant.className = "text-emerald-400";
+            } else if (astro.haDeg > 0.1) {
+                els.dMeridian.innerText = "Afternoon (Sun West, Shadow East)";
+                els.dQuadrant.innerText = "Reading East Quadrant";
+                els.dQuadrant.className = "text-emerald-400";
+            } else {
+                els.dMeridian.innerText = "Exact Solar Noon";
+                els.dQuadrant.innerText = "Shadow in Center Gap";
+                els.dQuadrant.className = "text-amber-500";
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (state.isPlaying) {
+                state.timeHours += state.speed; 
+                if (state.timeHours >= 24) state.timeHours = 0; // Loop full day
+                updateSimulation('system');
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // --- INIT & EVENT LISTENERS ---
+        function init() {
+            // Set initial inputs
+            els.pickerDate.value = dayOfYearToDateStr(state.dayOfYear);
+            els.pickerTime.value = decimalToTimeString(state.timeHours);
+            els.inputLat.value = state.lat;
+            els.inputLon.value = state.lon;
+
+            buildSamratYantra(state.lat);
+            updateSimulation('system');
+            requestAnimationFrame(animate);
+        }
+
+        // Time Inputs
+        els.sliderTime.addEventListener('input', (e) => {
+            state.timeHours = parseFloat(e.target.value);
+            state.isPlaying = false; updatePlayButton();
+            updateSimulation('time_slider');
+        });
+        els.pickerTime.addEventListener('change', (e) => {
+            if(!e.target.value) return;
+            state.timeHours = timeStringToDecimal(e.target.value);
+            state.isPlaying = false; updatePlayButton();
+            updateSimulation('time_picker');
+        });
+
+        // Date Inputs
+        els.sliderDay.addEventListener('input', (e) => {
+            state.dayOfYear = parseInt(e.target.value);
+            updateSimulation('day_slider');
+        });
+        els.pickerDate.addEventListener('change', (e) => {
+            if(!e.target.value) return;
+            state.dayOfYear = dateToDayOfYear(e.target.value);
+            updateSimulation('date_picker');
+        });
+
+        // Playback
+        const updatePlayButton = () => {
+            if (state.isPlaying) {
+                els.btnPlay.innerHTML = '⏸ Pause Animation';
+                els.btnPlay.classList.add('playing');
+            } else {
+                els.btnPlay.innerHTML = '▶ Play Full Day Animation Loop';
+                els.btnPlay.classList.remove('playing');
+            }
+        };
+
+        els.btnPlay.addEventListener('click', () => {
+            state.isPlaying = !state.isPlaying;
+            updatePlayButton();
+        });
+
+        // Toggles & Camera
+        els.toggleObserver.addEventListener('change', (e) => {
+            state.virtualObserver.visible = e.target.checked;
+        });
+
+        els.btnResetCam.addEventListener('click', () => {
+            camera.position.set(-90, 80, 50);
+            controls.target.set(0, 20, CENTER_OFFSET);
+        });
+
+        // Location Management
+        const applyLocation = (lat, lon, tz) => {
+            if(state.lat !== lat) {
+                state.lat = lat;
+                buildSamratYantra(lat); // Rebuild physically
+            }
+            state.lon = lon;
+            state.tzOffset = tz;
+            els.inputLat.value = lat;
+            els.inputLon.value = lon;
+            updateSimulation('system');
+        };
+
+        els.selectLoc.addEventListener('change', (e) => {
+            const val = e.target.value;
+            if(val === 'custom') {
+                els.divCustomLoc.classList.remove('hidden');
+            } else {
+                els.divCustomLoc.classList.add('hidden');
+                const loc = LOCATIONS[val];
+                applyLocation(loc.lat, loc.lon, loc.tz);
+            }
+        });
+
+        els.inputLat.addEventListener('change', (e) => applyLocation(parseFloat(e.target.value), state.lon, state.tzOffset));
+        els.inputLon.addEventListener('change', (e) => applyLocation(state.lat, parseFloat(e.target.value), state.tzOffset));
+
+        els.btnGeo.addEventListener('click', () => {
+            if("geolocation" in navigator) {
+                els.geoLoader.style.display = 'block';
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    els.geoLoader.style.display = 'none';
+                    const tz = -(new Date().getTimezoneOffset() / 60);
+                    els.selectLoc.value = "custom";
+                    els.divCustomLoc.classList.remove('hidden');
+                    applyLocation(pos.coords.latitude, pos.coords.longitude, tz);
+                }, () => {
+                    els.geoLoader.style.display = 'none';
+                    alert("Geolocation failed or permission denied.");
+                });
+            }
+        });
+
+        // Tabs & Mobile
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+            });
+        });
+
+        const uiPanel = document.getElementById('ui-panel');
+        document.getElementById('mobile-toggle').addEventListener('click', () => {
+            uiPanel.classList.toggle('open');
+            document.getElementById('mobile-icon').innerText = uiPanel.classList.contains('open') ? '▼' : '▲';
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Boot
+        init();
+    </script>
 </body>
 </html>
